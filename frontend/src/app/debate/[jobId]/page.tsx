@@ -113,10 +113,6 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
       >
         {/* Left: Patient / Specimen ID tags */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Argus Vision" className="h-6 w-auto object-contain opacity-90" />
-          </div>
-
           <div className="flex items-center gap-4 text-xs font-mono">
             <div className="flex items-center gap-2">
               <span className="text-[#a1a1a6] font-semibold">SUBJECT:</span>
@@ -153,30 +149,6 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
       {/* ── MAIN WORKSPACE ────────────────────────────────────────── */}
       <div className="flex flex-1 w-full min-h-0 overflow-hidden">
         
-        {/* ── LEFT SIDEBAR: Action Toolbar + Patient Explorer ────── */}
-        <aside className="flex w-[260px] shrink-0 border-r select-none" style={{ backgroundColor: "#13161c", borderColor: "#2d313c" }}>
-          {/* Vertical action icons */}
-          <div className="flex w-12 flex-col items-center py-4 border-r gap-5" style={{ backgroundColor: "#0d0f13", borderColor: "#2d313c" }}>
-            {[
-              { id: "explore", path: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" },
-              { id: "grid", path: "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" },
-              { id: "measure", path: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" },
-              { id: "adjust", path: "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707M12 5a7 7 0 100 14 7 7 0 000-14z" },
-            ].map((icon) => (
-              <button key={icon.id} className="text-slate-500 hover:text-slate-200 transition-colors">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d={icon.path} />
-                </svg>
-              </button>
-            ))}
-          </div>
-
-          {/* Pipeline timeline explorer */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-            <TimelineRail completedAt={ws.completedAt} phase={ws.phase} triggerFired={ws.triggerFired} />
-          </div>
-        </aside>
-
         {/* ── CENTER GRID: 2x2 DICOM Image Viewer ────────────────── */}
         <section className="flex-1 min-w-0 bg-[#000000] p-1 grid grid-cols-2 grid-rows-2 gap-1 border-r select-none" style={{ borderColor: "#2d313c" }}>
           

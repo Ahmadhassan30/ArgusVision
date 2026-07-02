@@ -104,46 +104,59 @@ export default function DebateTranscript({
             return (
               <div
                 key={turn.index}
-                className="rounded border p-3 flex flex-col gap-2 transition-all duration-300"
+                className="rounded border p-3 flex gap-3 transition-all duration-300"
                 style={{
                   backgroundColor: "#0d0d0f",
                   borderColor: isLast && active ? meta.color : "#1a1a1f",
                   boxShadow: isLast && active ? `inset 2px 0 0 ${meta.color}` : "none",
                 }}
               >
-                {/* Meta details */}
-                <div className="flex items-center justify-between border-b pb-1.5" style={{ borderColor: "#141417" }}>
-                  <div className="flex items-center gap-2">
+                {/* Visual Face Avatar */}
+                <div className="shrink-0">
+                  <img
+                    src={turn.agent === "A" ? "/effnet.png" : "/vit.png"}
+                    alt={meta.name}
+                    className="h-8 w-8 rounded-full border bg-slate-800 object-cover"
+                    style={{ borderColor: meta.color }}
+                  />
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  {/* Meta details */}
+                  <div className="flex items-center justify-between border-b pb-1.5" style={{ borderColor: "#141417" }}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-mono text-[9px] font-bold uppercase tracking-widest"
+                        style={{ color: meta.color }}
+                      >
+                        {meta.name}
+                      </span>
+                      <span className="font-mono text-[9px]" style={{ color: "#4b5563" }}>
+                        [ROUND {turn.round}]
+                      </span>
+                    </div>
+
                     <span
-                      className="font-mono text-[9px] font-bold uppercase tracking-widest"
-                      style={{ color: meta.color }}
+                      className="font-mono text-[8px] font-semibold tracking-wider rounded px-1"
+                      style={{
+                        backgroundColor: `${meta.color}15`,
+                        color: meta.color,
+                        border: `1px solid ${meta.color}30`,
+                      }}
                     >
-                      {meta.name}
-                    </span>
-                    <span className="font-mono text-[9px]" style={{ color: "#4b5563" }}>
-                      [ROUND {turn.round}]
+                      {MOVE_LABEL[turn.move]}
                     </span>
                   </div>
 
-                  <span
-                    className="font-mono text-[8px] font-semibold tracking-wider rounded px-1"
-                    style={{
-                      backgroundColor: `${meta.color}15`,
-                      color: meta.color,
-                      border: `1px solid ${meta.color}30`,
-                    }}
-                  >
-                    {MOVE_LABEL[turn.move]}
-                  </span>
-                </div>
-
-                {/* Body Text */}
-                <div style={{ color: isLast && active ? "#e5e7eb" : "#a1a1a6" }}>
-                  <ArgumentStream
-                    text={turn.text}
-                    agentId={turn.agent}
-                    active={isLast && active}
-                  />
+                  {/* Body Text */}
+                  <div style={{ color: isLast && active ? "#e5e7eb" : "#a1a1a6" }}>
+                    <ArgumentStream
+                      text={turn.text}
+                      agentId={turn.agent}
+                      active={isLast && active}
+                    />
+                  </div>
                 </div>
               </div>
             );
