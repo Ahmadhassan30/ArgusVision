@@ -250,7 +250,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
   }, [terminalLines]);
 
   return (
-    <main className="h-screen w-screen flex flex-col overflow-hidden text-slate-300 font-sans" style={{ backgroundColor: "#000000" }}>
+    <main className="min-h-screen w-screen flex flex-col overflow-y-auto scroll-clinical text-slate-300 font-sans" style={{ backgroundColor: "#000000" }}>
       {/* ── HEADER BAR (DICOM style) ────────────────────────────────── */}
       <header
         className="flex h-12 w-full shrink-0 items-center justify-between px-4 border-b select-none"
@@ -283,12 +283,12 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
       </header>
 
       {/* ── MAIN WORKSPACE ────────────────────────────────────────── */}
-      <div className="flex flex-1 w-full min-h-0 overflow-hidden">
+      <div className="flex flex-1 w-full">
 
         {/* ── LEFT AREA: 2x2 DICOM Viewer Grid + Bottom Debate Log ── */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r" style={{ borderColor: "#2d313c" }}>
+        <div className="flex-1 flex flex-col min-w-0 border-r" style={{ borderColor: "#2d313c" }}>
           {/* Top: 2x2 Grid */}
-          <section className="flex-1 min-h-0 p-1 grid grid-cols-2 grid-rows-2 gap-1 select-none bg-black">
+          <section className="w-full shrink-0 p-1 grid grid-cols-2 grid-rows-2 gap-1 select-none bg-black h-[480px]">
 
             {/* Quadrant 1: Localizer Specimen */}
             <div
@@ -426,7 +426,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
           </section>
 
           {/* Bottom: Debate Transcript in Chat Form */}
-          <div className="h-[380px] shrink-0 border-t" style={{ borderColor: "#2d313c" }}>
+          <div className="w-full border-t" style={{ borderColor: "#2d313c" }}>
             <DebateTranscript
               turns={debate.turns}
               agreement={debate.agreement}
@@ -440,228 +440,240 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
         </div>
 
         {/* ── RIGHT: Clinical Diagnostics Report Sidebar ─────────── */}
-        <aside className="w-[450px] shrink-0 border-l flex flex-col overflow-hidden select-text" style={{ backgroundColor: "#11141a", borderColor: "#2d313c" }}>
+        <aside className="w-[450px] shrink-0 border-l select-text" style={{ backgroundColor: "#0a0b0f", borderColor: "#1e2028" }}>
           {/* Sidebar Header */}
-          <div className="flex items-center justify-between bg-[#191d24] px-4 py-3.5 border-b select-none" style={{ borderColor: "#2d313c" }}>
-            <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#a1a1a6]">
-              DIAGNOSTIC REPORT LOG
+          <div className="flex items-center justify-between px-6 py-4 border-b select-none" style={{ borderColor: "#1e2028" }}>
+            <span className="font-sans text-[13px] font-semibold uppercase tracking-[0.18em] text-[#52566b]">
+              Diagnostic Report
             </span>
-            <span className="font-mono text-[9px] text-[#6b7280]">
-              ID: {jobId.slice(0, 8).toUpperCase()}
+            <span className="font-mono text-[11px] text-[#32353f]">
+              {jobId.slice(0, 8).toUpperCase()}
             </span>
           </div>
 
-          {/* Sidebar Contents */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-5 scroll-clinical bg-[#0b0c10]">
+          {/* Sidebar Contents — flat clinical sections */}
+          <div className="flex flex-col divide-y" style={{ borderColor: "#1e2028" }}>
 
-            {/* Section 1: Specimen Input Gate */}
-            <div className="bg-[#12151b] rounded border p-4 space-y-3" style={{ borderColor: "#1e222b" }}>
-              <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: "#1e222b" }}>
-                <span className="font-mono text-[10px] font-bold text-[#e5e7eb] tracking-wide">
-                  1. INPUT VALIDATION GATING
+            {/* ── Section 1: Input Validation ── */}
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-[11px] uppercase tracking-[0.14em] font-semibold text-[#52566b]">
+                  Input Validation
                 </span>
-                {ws.completedAt.uploaded ? (
-                  <span className="font-mono text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded font-bold">
-                    VERIFIED
-                  </span>
-                ) : (
-                  <span className="font-mono text-[9px] bg-[#2d313c]/40 text-[#6b7280] px-1.5 py-0.5 rounded">
-                    AWAITING
-                  </span>
-                )}
+                <span className={`font-mono text-[10px] font-semibold tracking-wider ${ws.completedAt.uploaded ? "text-emerald-400" : "text-[#52566b]"}`}>
+                  {ws.completedAt.uploaded ? "● VERIFIED" : "○ AWAITING"}
+                </span>
               </div>
-              <div className="space-y-2 text-xs text-slate-300">
-                <div className="flex justify-between">
-                  <span className="text-[#a1a1a6]">Modality</span>
-                  <span className="font-medium text-slate-200">Dermoscopic RGB Image</span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm text-[#52566b]">Modality</span>
+                  <span className="text-sm font-medium text-[#c9ccd6]">Dermoscopic RGB</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#a1a1a6]">Resolution Gate</span>
-                  <span className="font-mono text-slate-200">224 x 224 pixels [PASS]</span>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm text-[#52566b]">Input Resolution</span>
+                  <span className="font-mono text-sm text-[#c9ccd6]">224 × 224 px</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#a1a1a6]">Lesion Pre-filter</span>
-                  <span className="font-mono text-emerald-400 font-semibold">[Lesion Detected]</span>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm text-[#52566b]">Lesion Gate</span>
+                  <span className="font-mono text-sm text-emerald-400">Confirmed</span>
                 </div>
-                <p className="text-[10px] text-[#6b7280] leading-relaxed pt-1 border-t border-[#1a1e26]">
-                  * MobilNetV3 binary gate validates dermoscopic lesions, rejecting accidental macro photos or out-of-distribution noise.
+                <p className="text-[11px] leading-relaxed text-[#32353f] pt-1">
+                  MobileNetV3 pre-filter validates dermoscopic origin before core inference.
                 </p>
               </div>
             </div>
 
-            {/* Section 2: Neural Classifier Readouts */}
-            <div className="bg-[#12151b] rounded border p-4 space-y-4" style={{ borderColor: "#1e222b" }}>
-              <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: "#1e222b" }}>
-                <span className="font-mono text-[10px] font-bold text-[#e5e7eb] tracking-wide">
-                  2. NEURAL CLASSIFIER OUTPUTS
+            {/* ── Section 2: Neural Classifier Outputs ── */}
+            <div className="px-6 py-5 space-y-5">
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-[11px] uppercase tracking-[0.14em] font-semibold text-[#52566b]">
+                  Classifier Outputs
                 </span>
-                {ws.agentA && ws.agentB ? (
-                  <span className="font-mono text-[9px] bg-sky-500/10 text-sky-400 border border-sky-500/25 px-1.5 py-0.5 rounded font-bold">
-                    COMPUTED
-                  </span>
-                ) : (
-                  <span className="font-mono text-[9px] bg-[#2d313c]/40 text-[#6b7280] px-1.5 py-0.5 rounded">
-                    COMPUTING
-                  </span>
-                )}
+                <span className={`font-mono text-[10px] font-semibold tracking-wider ${ws.agentA && ws.agentB ? "text-sky-400" : "text-[#52566b]"}`}>
+                  {ws.agentA && ws.agentB ? "● COMPUTED" : "○ RUNNING"}
+                </span>
               </div>
 
-              {/* Agent A readout */}
+              {/* Agent A */}
               {ws.agentA && (
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-mono text-[#3b82f6] font-bold">AGENT-A (EfficientNet-B4)</span>
-                    <span className="font-mono text-[#e5e7eb] font-semibold">{(ws.agentA.result.confidence * 100).toFixed(0)}% Conf</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-semibold text-sky-400">EfficientNet-B4</span>
+                    <span className="font-mono text-sm text-[#c9ccd6]">{(ws.agentA.result.confidence * 100).toFixed(1)}% confidence</span>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {Object.entries(aProbs || {}).map(([cls, val]) => {
-                      if (val > 0.01) {
-                        const pct = Math.round(val * 100);
-                        return (
-                          <div key={cls} className="space-y-0.5">
-                            <div className="flex justify-between text-[10px] text-[#a1a1a6]">
-                              <span>{getClassName(cls)}</span>
-                              <span className="font-mono font-medium text-slate-200">{pct}%</span>
-                            </div>
-                            <div className="h-1 w-full bg-[#1c1f26] rounded-full overflow-hidden">
-                              <div className="h-full bg-sky-500 rounded-full" style={{ width: `${pct}%` }} />
-                            </div>
+                      if (val <= 0.01) return null;
+                      const pct = Math.round(val * 100);
+                      return (
+                        <div key={cls} className="space-y-1">
+                          <div className="flex justify-between text-[12px]">
+                            <span className="text-[#52566b]">{getClassName(cls)}</span>
+                            <span className="font-mono text-[#9da3b4]">{pct}%</span>
                           </div>
-                        );
-                      }
-                      return null;
+                          <div className="h-px w-full overflow-hidden" style={{ backgroundColor: "#1e2028" }}>
+                            <div className="h-full" style={{ width: `${pct}%`, backgroundColor: "#38bdf8", opacity: 0.7 }} />
+                          </div>
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
               )}
 
-              {/* Agent B readout */}
+              {/* Divider between agents */}
+              {ws.agentA && ws.agentB && <div className="border-t" style={{ borderColor: "#1e2028" }} />}
+
+              {/* Agent B */}
               {ws.agentB && (
-                <div className="space-y-2 pt-3 border-t border-[#1a1e26]">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-mono text-[#a855f7] font-bold">AGENT-B (ViT-B/16)</span>
-                    <span className="font-mono text-[#e5e7eb] font-semibold">{(ws.agentB.result.confidence * 100).toFixed(0)}% Conf</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-semibold text-purple-400">ViT-B/16</span>
+                    <span className="font-mono text-sm text-[#c9ccd6]">{(ws.agentB.result.confidence * 100).toFixed(1)}% confidence</span>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {Object.entries(bProbs || {}).map(([cls, val]) => {
-                      if (val > 0.01) {
-                        const pct = Math.round(val * 100);
-                        return (
-                          <div key={cls} className="space-y-0.5">
-                            <div className="flex justify-between text-[10px] text-[#a1a1a6]">
-                              <span>{getClassName(cls)}</span>
-                              <span className="font-mono font-medium text-slate-200">{pct}%</span>
-                            </div>
-                            <div className="h-1 w-full bg-[#1c1f26] rounded-full overflow-hidden">
-                              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${pct}%` }} />
-                            </div>
+                      if (val <= 0.01) return null;
+                      const pct = Math.round(val * 100);
+                      return (
+                        <div key={cls} className="space-y-1">
+                          <div className="flex justify-between text-[12px]">
+                            <span className="text-[#52566b]">{getClassName(cls)}</span>
+                            <span className="font-mono text-[#9da3b4]">{pct}%</span>
                           </div>
-                        );
-                      }
-                      return null;
+                          <div className="h-px w-full overflow-hidden" style={{ backgroundColor: "#1e2028" }}>
+                            <div className="h-full" style={{ width: `${pct}%`, backgroundColor: "#c084fc", opacity: 0.7 }} />
+                          </div>
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
+              )}
+
+              {!ws.agentA && !ws.agentB && (
+                <p className="text-sm text-[#32353f]">Awaiting inference…</p>
               )}
             </div>
 
-            {/* Section 3: Divergence Gate */}
+            {/* ── Section 3: Divergence Analysis ── */}
             {ws.trigger && (
-              <div className="bg-[#12151b] rounded border p-4 space-y-3" style={{ borderColor: "#1e222b" }}>
-                <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: "#1e222b" }}>
-                  <span className="font-mono text-[10px] font-bold text-[#e5e7eb] tracking-wide">
-                    3. DIVERGENCE TRIGGER ANALYSIS
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-sans text-[11px] uppercase tracking-[0.14em] font-semibold text-[#52566b]">
+                    Divergence Analysis
                   </span>
-                  <span className={`font-mono text-[9px] border px-1.5 py-0.5 rounded font-bold ${ws.trigger.fired
-                    ? "bg-amber-500/10 text-amber-400 border-amber-500/25"
-                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
-                    }`}>
-                    {ws.trigger.fired ? "DEBATE TRIGGERED" : "FAST PATH"}
+                  <span className={`font-mono text-[10px] font-semibold tracking-wider ${ws.trigger.fired ? "text-amber-400" : "text-emerald-400"}`}>
+                    {ws.trigger.fired ? "● DEBATE ACTIVE" : "● FAST PATH"}
                   </span>
                 </div>
-                <div className="space-y-2.5 text-xs text-slate-300">
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] text-[#a1a1a6]">
-                      <span>Jensen-Shannon Divergence</span>
-                      <span className="font-mono font-semibold text-slate-200">{ws.trigger.js_divergence.toFixed(4)}</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-[#1c1f26] rounded-full overflow-hidden relative">
-                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, (ws.trigger.js_divergence / ws.trigger.threshold_js) * 100)}%` }} />
-                      <div className="absolute top-0 bottom-0 w-0.5 bg-red-600" style={{ left: "100%" }} title="Threshold" />
-                    </div>
-                    <div className="flex justify-between text-[9px] text-[#6b7280]">
-                      <span>Identical distributions</span>
-                      <span>Threshold limit: {ws.trigger.threshold_js.toFixed(2)}</span>
-                    </div>
+
+                {/* JS Divergence meter */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-[#52566b]">Jensen–Shannon Divergence</span>
+                    <span className={`font-mono text-sm font-semibold ${ws.trigger.fired ? "text-amber-400" : "text-[#c9ccd6]"}`}>
+                      {ws.trigger.js_divergence.toFixed(4)}
+                    </span>
                   </div>
-                  <div className="flex justify-between border-t border-[#1a1e26] pt-2">
-                    <span className="text-[#a1a1a6]">Agent A Entropy</span>
-                    <span className="font-mono text-slate-200">{ws.trigger.entropy_a.toFixed(3)} bits</span>
+                  {/* Track */}
+                  <div className="relative h-px w-full" style={{ backgroundColor: "#1e2028" }}>
+                    <div
+                      className="h-full absolute left-0 top-0"
+                      style={{
+                        width: `${Math.min(100, (ws.trigger.js_divergence / ws.trigger.threshold_js) * 100)}%`,
+                        backgroundColor: ws.trigger.fired ? "#f59e0b" : "#34d399",
+                      }}
+                    />
+                    {/* Threshold marker */}
+                    <div className="absolute top-[-3px] bottom-[-3px] w-px bg-red-600/60" style={{ left: "100%" }} />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#a1a1a6]">Agent B Entropy</span>
-                    <span className="font-mono text-slate-200">{ws.trigger.entropy_b.toFixed(3)} bits</span>
+                  <div className="flex justify-between text-[10px] text-[#32353f]">
+                    <span>0.00 — identical</span>
+                    <span>threshold {ws.trigger.threshold_js.toFixed(2)}</span>
                   </div>
-                  <p className="text-[10px] text-[#6b7280] leading-relaxed border-t border-[#1a1e26] pt-1">
-                    * JS divergence measures similarity of predictions. If divergence exceeds the threshold limit ({ws.trigger.threshold_js}), consensus fails, triggering an active debate.
-                  </p>
                 </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-[#52566b]">Agent A Entropy</span>
+                    <span className="font-mono text-sm text-[#9da3b4]">{ws.trigger.entropy_a.toFixed(3)} bits</span>
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-[#52566b]">Agent B Entropy</span>
+                    <span className="font-mono text-sm text-[#9da3b4]">{ws.trigger.entropy_b.toFixed(3)} bits</span>
+                  </div>
+                </div>
+                <p className="text-[11px] leading-relaxed text-[#32353f]">
+                  JS divergence &gt; {ws.trigger.threshold_js.toFixed(2)} triggers adversarial consensus negotiation.
+                </p>
               </div>
             )}
 
-            {/* Section 4: Calibrated Consensus Outcome */}
+            {/* ── Section 4: Consensus Verdict ── */}
             {ws.consensus && (
-              <div className="bg-[#12151b] rounded border p-4 space-y-3" style={{ borderColor: "#1e222b" }}>
-                <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: "#1e222b" }}>
-                  <span className="font-mono text-[10px] font-bold text-[#e5e7eb] tracking-wide">
-                    4. CALIBRATED CONSENSUS VERDICT
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-sans text-[11px] uppercase tracking-[0.14em] font-semibold text-[#52566b]">
+                    Consensus Verdict
                   </span>
-                  <span className="font-mono text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded font-bold">
-                    RESOLVED
+                  <span className="font-mono text-[10px] font-semibold tracking-wider text-emerald-400">
+                    ● RESOLVED
                   </span>
                 </div>
-                <div className="space-y-2 text-xs text-slate-300">
-                  <div className="flex justify-between">
-                    <span className="text-[#a1a1a6]">Consensus Diagnosis</span>
-                    <span className="font-bold text-emerald-400">{getClassName(ws.consensus.pred_class)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#a1a1a6]">Final Confidence</span>
-                    <span className="font-mono font-semibold text-slate-200">{(ws.consensus.confidence * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#a1a1a6]">ECE Calibration</span>
-                    <span className="font-mono text-emerald-400 font-semibold">{ws.consensus.ece.toFixed(4)} <span className="text-[#6b7280] font-normal">(Target &lt; 0.05)</span></span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#a1a1a6]">Platt Temperature</span>
-                    <span className="font-mono text-slate-200">{ws.consensus.temperature.toFixed(2)}</span>
-                  </div>
 
-                  <div className="space-y-1.5 pt-3 border-t border-[#1a1e26]">
-                    <span className="text-[10px] text-[#a1a1a6] block">Calibrated Probability Map</span>
-                    {Object.entries(ws.consensus.probabilities).map(([cls, val]) => {
-                      if (val > 0.01) {
-                        const pct = Math.round(val * 100);
-                        return (
-                          <div key={`cons_${cls}`} className="space-y-0.5">
-                            <div className="flex justify-between text-[10px] text-[#a1a1a6]">
-                              <span>{getClassName(cls)}</span>
-                              <span className="font-mono text-slate-200">{pct}%</span>
-                            </div>
-                            <div className="h-1 w-full bg-[#1c1f26] rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                  <p className="text-[10px] text-[#6b7280] leading-relaxed border-t border-[#1a1e26] pt-1">
-                    * Expected Calibration Error (ECE) measures statistical confidence alignment. Temperature adjustment calibrates classification probabilities.
+                {/* Primary verdict — large and prominent */}
+                <div className="space-y-1">
+                  <span className="text-[11px] uppercase tracking-[0.12em] text-[#52566b]">Diagnosis</span>
+                  <p className="text-[22px] font-semibold text-emerald-400 leading-tight">
+                    {getClassName(ws.consensus.pred_class)}
                   </p>
                 </div>
+
+                <div className="space-y-3 pt-1">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-[#52566b]">Confidence</span>
+                    <span className="font-mono text-sm font-semibold text-[#c9ccd6]">
+                      {(ws.consensus.confidence * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-[#52566b]">ECE Calibration Error</span>
+                    <span className="font-mono text-sm text-emerald-400">
+                      {ws.consensus.ece.toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-[#52566b]">Platt Temperature</span>
+                    <span className="font-mono text-sm text-[#9da3b4]">
+                      {ws.consensus.temperature.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Calibrated probability bars */}
+                <div className="space-y-3 pt-2">
+                  <span className="text-[11px] uppercase tracking-[0.12em] text-[#32353f]">Calibrated Probabilities</span>
+                  {Object.entries(ws.consensus.probabilities).map(([cls, val]) => {
+                    if (val <= 0.01) return null;
+                    const pct = Math.round(val * 100);
+                    return (
+                      <div key={`cons_${cls}`} className="space-y-1">
+                        <div className="flex justify-between text-[12px]">
+                          <span className="text-[#52566b]">{getClassName(cls)}</span>
+                          <span className="font-mono text-[#9da3b4]">{pct}%</span>
+                        </div>
+                        <div className="h-px w-full overflow-hidden" style={{ backgroundColor: "#1e2028" }}>
+                          <div className="h-full" style={{ width: `${pct}%`, backgroundColor: "#34d399", opacity: 0.8 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-[11px] leading-relaxed text-[#32353f]">
+                  Expected Calibration Error target &lt; 0.05. Temperature scaling aligns raw logits to empirical clinical accuracy.
+                </p>
               </div>
             )}
 

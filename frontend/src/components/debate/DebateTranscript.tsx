@@ -5,12 +5,11 @@
  *
  * Implements a split comparison layout:
  * - Center vertical line separator.
- * - Sticky headers with stylized ASCII art text (Figlet standard CNN and ViT banners).
  * - Flat, borderless dialogue flow resembling ChatGPT message logs (sans-serif text).
  * - Stripped out all boxes and container card backgrounds for a clean, open layout.
+ * - Text size is increased to text-base (16px) for optimal readability.
+ * - Height expands naturally without internal scrollbars, conforming to a unified page scroll.
  */
-
-import { useEffect, useRef } from "react";
 
 import { AGENTS, getClassName } from "@/lib/constants";
 import type { DebateTurn } from "@/lib/debate/engine";
@@ -45,24 +44,14 @@ export default function DebateTranscript({
   active,
   convergedClass,
 }: DebateTranscriptProps): React.JSX.Element {
-  const scrollRefA = useRef<HTMLDivElement | null>(null);
-  const scrollRefB = useRef<HTMLDivElement | null>(null);
-
   const turnsA = turns.filter((t) => t.agent === "A");
   const turnsB = turns.filter((t) => t.agent === "B");
   const lastIndex = turns.length - 1;
 
-  useEffect(() => {
-    const elA = scrollRefA.current;
-    if (elA) elA.scrollTo({ top: elA.scrollHeight, behavior: "smooth" });
-    const elB = scrollRefB.current;
-    if (elB) elB.scrollTo({ top: elB.scrollHeight, behavior: "smooth" });
-  }, [turns.length]);
-
   const pct = Math.round(agreement * 100);
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0c] p-4 select-none">
+    <div className="flex flex-col bg-[#0a0a0c] p-4 select-none">
       {/* Header Bar */}
       <div className="flex items-center justify-between border-b pb-3 mb-3 shrink-0" style={{ borderColor: "#1a1a1f" }}>
         <div className="flex items-center gap-2">
@@ -95,13 +84,10 @@ export default function DebateTranscript({
       </div>
 
       {/* Side-by-Side Dual Column Panels */}
-      <div className="flex-1 flex min-h-0 divide-x divide-[#1a1a1f]">
+      <div className="flex divide-x divide-[#1a1a1f]">
 
         {/* LEFT COLUMN: Agent A (CNN) */}
-        <div
-          ref={scrollRefA}
-          className="flex-1 overflow-y-auto pr-3 space-y-2.5 scroll-clinical"
-        >
+        <div className="flex-1 pr-3 space-y-2.5">
           {/* Sticky Header with ASCII Art */}
           <div className="sticky top-0 bg-[#0a0a0c] pb-3 pt-1 flex flex-col items-center gap-2 select-none border-b border-[#141417] z-10">
             <pre className="text-sky-400 font-mono font-bold leading-[1.1] text-center select-none text-[10px] tracking-tight">
@@ -144,12 +130,12 @@ export default function DebateTranscript({
                       {MOVE_LABEL[turn.move]}
                     </span>
                   </div>
-                  <div className="text-sm font-sans leading-relaxed text-neutral-200">
+                  <div className="text-[19px] font-sans leading-relaxed text-neutral-200">
                     <ArgumentStream
                       text={turn.text}
                       agentId="A"
                       active={isLast && active}
-                      className="font-sans text-sm text-neutral-200"
+                      className="font-sans text-[19px] leading-relaxed text-neutral-200"
                     />
                   </div>
                 </div>
@@ -159,10 +145,7 @@ export default function DebateTranscript({
         </div>
 
         {/* RIGHT COLUMN: Agent B (ViT) */}
-        <div
-          ref={scrollRefB}
-          className="flex-1 overflow-y-auto pl-3 space-y-2.5 scroll-clinical"
-        >
+        <div className="flex-1 pl-3 space-y-2.5">
           {/* Sticky Header with ASCII Art */}
           <div className="sticky top-0 bg-[#0a0a0c] pb-3 pt-1 flex flex-col items-center gap-2 select-none border-b border-[#141417] z-10">
             <pre className="text-purple-400 font-mono font-bold leading-[1.1] text-center select-none text-[10px] tracking-tight">
@@ -205,12 +188,12 @@ export default function DebateTranscript({
                       {MOVE_LABEL[turn.move]}
                     </span>
                   </div>
-                  <div className="text-sm font-sans leading-relaxed text-neutral-200">
+                  <div className="text-[19px] font-sans leading-relaxed text-neutral-200">
                     <ArgumentStream
                       text={turn.text}
                       agentId="B"
                       active={isLast && active}
-                      className="font-sans text-sm text-neutral-200"
+                      className="font-sans text-[19px] leading-relaxed text-neutral-200"
                     />
                   </div>
                 </div>
