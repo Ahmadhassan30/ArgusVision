@@ -1,18 +1,11 @@
 "use client";
 
 /**
- * Debate Page — DICOM Workstation Redesign.
+ * Debate Page — DICOM Workstation Layout.
  *
  * Implements a high-fidelity replica of the medical imaging software UI (DICOM Viewer)
- * shown in the reference image, preserving all active state logic.
- *
- * Layout Structure:
- * - Header: Zeliha UNLUEL patient identity header replica (Subject/Specimen Info).
- * - Left Panel: Search toolbar (Vertical action icons) + Clinical study explorer.
- * - Center Panel: 2x2 clinical viewports (Coronal, Sagittal, Axial, 3D Reconstruction)
- *   displaying source specimen, Agent A Grad-CAM++, Agent B Attention Rollout, and Disagreement Map.
- * - Right Panel: Stacked diagnostic "Seriler" (series) representing Agent A, Agent B,
- *   Consensus Verdict, and transaction log.
+ * with the 2x2 clinical viewports on the left and stacked diagnostic "Seriler" (series)
+ * panels on the right side. Keeps all dynamic backend logic and model face icons intact.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -20,13 +13,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useDebateStream } from "@/hooks/useDebateStream";
 import { useDebateEngine } from "@/hooks/useDebateEngine";
 import { loadJobImage } from "@/lib/sessionImage";
+import { getClassName } from "@/lib/constants";
 
-import TimelineRail from "@/components/debate/TimelineRail";
 import AgentScoreboard, { type AgentStatus } from "@/components/debate/AgentScoreboard";
 import DebateTranscript from "@/components/debate/DebateTranscript";
 import TriggerPanel from "@/components/debate/TriggerPanel";
 import ConsensusVerdict from "@/components/debate/ConsensusVerdict";
-import DisagreementMap from "@/components/debate/DisagreementMap";
 import HeatmapCanvas from "@/components/debate/HeatmapCanvas";
 import { AGENT_A, AGENT_B } from "@/lib/constants";
 
@@ -111,7 +103,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
         className="flex h-12 w-full shrink-0 items-center justify-between px-4 border-b select-none"
         style={{ backgroundColor: "#1e222b", borderColor: "#2d313c" }}
       >
-        {/* Left: Patient / Specimen ID tags */}
+        {/* Left: Specimen ID tags */}
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4 text-xs font-mono">
             <div className="flex items-center gap-2">
@@ -161,7 +153,6 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               backgroundColor: "#050505"
             }}
           >
-            {/* Viewport header tags */}
             <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
               <div>{formattedDate}</div>
               <div>STUDY: LOCALIZER</div>
@@ -174,7 +165,6 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               CORONAL
             </div>
 
-            {/* Main specimen image */}
             <div className="flex-1 flex items-center justify-center p-6 min-h-0">
               {sourceImage ? (
                 <img
@@ -188,7 +178,6 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               )}
             </div>
 
-            {/* Viewport footer info */}
             <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
               <div>Images: 1/1</div>
               <div>Wt: 256 / ww: 256</div>
@@ -335,7 +324,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
 
         </section>
 
-        {/* ── RIGHT PANEL:stacked "Seriler" tray (Agent, consensus & log) ── */}
+        {/* ── RIGHT PANEL: stacked "Seriler" tray (Agent, consensus & log) ── */}
         <aside className="w-[480px] shrink-0 border-l flex flex-col" style={{ backgroundColor: "#13161c", borderColor: "#2d313c" }}>
           {/* Header */}
           <div className="flex h-10 items-center justify-between px-4 border-b shrink-0" style={{ backgroundColor: "#1e222b", borderColor: "#2d313c" }}>
