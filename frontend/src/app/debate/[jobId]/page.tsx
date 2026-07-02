@@ -91,7 +91,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
 
     // Header logo shell info
     lines.push(
-      <div key="boot" className="text-neutral-500 font-mono text-[11px]">
+      <div key="boot" className="text-neutral-500 font-mono text-[13px]">
         <div>[  INIT  ] Initializing Argus Consensus System (v2.1.0-lts)...</div>
         <div>[  BOOT  ] Hooking CUDA classification endpoints (T4 GPU verified).</div>
       </div>
@@ -100,7 +100,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     // Stage 1/2 Inputs verification
     if (ws.completedAt.uploaded) {
       lines.push(
-        <div key="gating" className="text-neutral-400 font-mono text-[11px] space-y-1">
+        <div key="gating" className="text-neutral-400 font-mono text-[13px] space-y-1">
           <div className="text-sky-400 font-semibold">┌── [SYSTEM] SPECIMEN INPUT GATE VERIFICATION</div>
           <div className="pl-4 border-l border-sky-950 space-y-0.5">
             <div>Subject Specimen  : <span className="text-white font-semibold">ISIC_{jobId.slice(0, 8).toUpperCase()}</span></div>
@@ -116,7 +116,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     // Models init
     if (ws.completedAt.agents_init) {
       lines.push(
-        <div key="agents_init" className="text-neutral-500 font-mono text-[11px]">
+        <div key="agents_init" className="text-neutral-500 font-mono text-[13px]">
           <div>[  INFO  ] Classification models initialized in frozen eval mode.</div>
           <div>[  INFO  ] Core agents seeded: <span className="text-sky-400 font-semibold">EfficientNet-B4</span> (CNN) & <span className="text-purple-400 font-semibold">ViT-B/16</span> (Transformer).</div>
         </div>
@@ -126,7 +126,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     // Agent A classification distributions
     if (ws.agentA) {
       lines.push(
-        <div key="agentA" className="text-neutral-400 font-mono text-[11px] space-y-1">
+        <div key="agentA" className="text-neutral-400 font-mono text-[13px] space-y-1">
           <div className="text-emerald-500 font-semibold">┌── [AGENT-A] EFFICIENTNET-B4 CLASSIFIER OUTPUTS</div>
           <div className="pl-4 border-l border-emerald-950 space-y-0.5">
             <div>Reasoning Mode    : CNN Structural Feature Analysis</div>
@@ -139,7 +139,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
                 const barLen = Math.round(val * 10);
                 const bar = "█".repeat(barLen) + "░".repeat(10 - barLen);
                 return (
-                  <div key={cls} className="text-[10px]">
+                  <div key={cls} className="text-[11px]">
                     {cls.padEnd(5)} : <span className="text-emerald-400">{bar}</span> {pct}% <span className="text-neutral-500">({getClassName(cls)})</span>
                   </div>
                 );
@@ -155,7 +155,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     // Agent B classification distributions
     if (ws.agentB) {
       lines.push(
-        <div key="agentB" className="text-neutral-400 font-mono text-[11px] space-y-1">
+        <div key="agentB" className="text-neutral-400 font-mono text-[13px] space-y-1">
           <div className="text-purple-500 font-semibold">┌── [AGENT-B] ViT-B/16 TRANSFORMER OUTPUTS</div>
           <div className="pl-4 border-l border-purple-950 space-y-0.5">
             <div>Reasoning Mode    : Vision Transformer Global Context Saliency</div>
@@ -168,7 +168,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
                 const barLen = Math.round(val * 10);
                 const bar = "█".repeat(barLen) + "░".repeat(10 - barLen);
                 return (
-                  <div key={cls} className="text-[10px]">
+                  <div key={cls} className="text-[11px]">
                     {cls.padEnd(5)} : <span className="text-purple-400">{bar}</span> {pct}% <span className="text-neutral-500">({getClassName(cls)})</span>
                   </div>
                 );
@@ -185,7 +185,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     if (ws.trigger) {
       const fired = ws.trigger.fired;
       lines.push(
-        <div key="trigger" className="text-neutral-400 font-mono text-[11px] space-y-1">
+        <div key="trigger" className="text-neutral-400 font-mono text-[13px] space-y-1">
           <div className="text-amber-500 font-semibold">┌── [SYSTEM] DIVERGENCE ANALYSIS GATE</div>
           <div className="pl-4 border-l border-amber-950 space-y-0.5">
             <div>JS Divergence     : <span className={fired ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>{ws.trigger.js_divergence.toFixed(4)}</span> <span className="text-neutral-500">(Threshold: {ws.trigger.threshold_js.toFixed(2)})</span></div>
@@ -201,7 +201,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     // Live debate status log inside the terminal
     if (debate.active || debate.turns.length > 0) {
       lines.push(
-        <div key="debate_status" className="text-neutral-500 font-mono text-[11px] space-y-1">
+        <div key="debate_status" className="text-neutral-500 font-mono text-[13px] space-y-1">
           <div>[DEBATE] Live adversarial negotiation active (Round {debate.round}).</div>
           <div>[DEBATE] Redirecting live transcript text streams to Chat Console.</div>
           {debate.finished && <div className="text-emerald-500 font-semibold">[DEBATE] Multi-agent negotiation converged. Consensus locked.</div>}
@@ -212,7 +212,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     // Calibrated Consensus output
     if (ws.consensus) {
       lines.push(
-        <div key="consensus" className="text-neutral-400 font-mono text-[11px] space-y-1">
+        <div key="consensus" className="text-neutral-400 font-mono text-[13px] space-y-1">
           <div className="text-emerald-500 font-semibold">┌── [CONSENSUS] FINAL CALIBRATED DIAGNOSIS</div>
           <div className="pl-4 border-l border-emerald-950 space-y-0.5">
             <div>Verdict Diagnosis : <span className="text-white font-bold">{getClassName(ws.consensus.pred_class)}</span></div>
@@ -226,7 +226,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
                 const barLen = Math.round(val * 10);
                 const bar = "█".repeat(barLen) + "░".repeat(10 - barLen);
                 return (
-                  <div key={`cons_${cls}`} className="text-[10px]">
+                  <div key={`cons_${cls}`} className="text-[11px]">
                     {cls.padEnd(5)} : <span className="text-emerald-400">{bar}</span> {pct}% <span className="text-neutral-500">({getClassName(cls)})</span>
                   </div>
                 );
@@ -425,7 +425,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
           </section>
 
           {/* Bottom: Debate Transcript in Chat Form */}
-          <div className="h-[285px] shrink-0 border-t" style={{ borderColor: "#2d313c" }}>
+          <div className="h-[380px] shrink-0 border-t" style={{ borderColor: "#2d313c" }}>
             <DebateTranscript
               turns={debate.turns}
               agreement={debate.agreement}
@@ -447,13 +447,13 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
               <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
             </div>
-            <div className="flex-1 text-center text-[10px] text-neutral-400 font-mono">
+            <div className="flex-1 text-center text-xs text-neutral-400 font-mono">
               argus-consensus-terminal — bash
             </div>
           </div>
 
           {/* Terminal Output stream */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono scroll-clinical text-neutral-300 bg-black">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono scroll-clinical text-neutral-300 bg-black text-[13px]">
             {terminalLines.map((line, idx) => (
               <div key={idx} className="leading-relaxed whitespace-pre-wrap">
                 {line}
@@ -461,7 +461,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
             ))}
             
             {/* Blinking CLI Prompt Cursor */}
-            <div className="flex items-center gap-1.5 select-none pt-2 border-t border-neutral-900 text-[10px]">
+            <div className="flex items-center gap-1.5 select-none pt-2 border-t border-neutral-900 text-[13px]">
               <span className="text-neutral-500">argus-diagnostics:~$</span>
               <span className="inline-block h-4 w-2 bg-neutral-400 animate-pulse align-middle" />
             </div>

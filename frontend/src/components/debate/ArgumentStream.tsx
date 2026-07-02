@@ -88,7 +88,7 @@ export default function ArgumentStream({
   const isTyping = active && visibleText.length < text.length;
 
   return (
-    <span className={["whitespace-pre-wrap font-mono text-[13px] leading-relaxed", className].join(" ")}>
+    <span className={["whitespace-pre-wrap text-sm leading-relaxed", className].join(" ")}>
       {visibleText}
       {isTyping && (
         <span
