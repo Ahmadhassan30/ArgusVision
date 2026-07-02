@@ -1,11 +1,15 @@
 "use client";
 
 /**
- * Debate Page — DICOM Workstation Layout.
+ * Debate Page — Spacious Clinical Workstation (Scrollable Layout).
  *
- * Implements a high-fidelity replica of the medical imaging software UI (DICOM Viewer)
- * with the 2x2 clinical viewports on the left and stacked diagnostic "Seriler" (series)
- * panels on the right side. Keeps all dynamic backend logic and model face icons intact.
+ * Mapped components according to user feedback:
+ * 1. Removed the locked h-screen viewport and enabled natural vertical scrolling.
+ * 2. 2x2 DICOM Viewer Grid is placed at the top with generous spacing (680px height).
+ * 3. Trigger/Divergence panel acts as a full-width metrics banner below the grid.
+ * 4. A clean three-column console below the grid displays Consensus Verdict,
+ *    Agent Classifiers, and the scrolling Live Debate Transcript.
+ * 5. This removes the clutter and allows all elements to scale and breathe.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +17,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useDebateStream } from "@/hooks/useDebateStream";
 import { useDebateEngine } from "@/hooks/useDebateEngine";
 import { loadJobImage } from "@/lib/sessionImage";
-import { getClassName } from "@/lib/constants";
 
 import AgentScoreboard, { type AgentStatus } from "@/components/debate/AgentScoreboard";
 import DebateTranscript from "@/components/debate/DebateTranscript";
@@ -45,7 +48,6 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
   const debate = useDebateEngine(ws, jobId);
 
   const [sourceImage, setSourceImage] = useState<string | null>(null);
-  const [activeSeries, setActiveSeries] = useState<"A" | "B" | "consensus" | "log">("consensus");
   const [selectedViewport, setSelectedViewport] = useState<1 | 2 | 3 | 4>(1);
   const [mounted, setMounted] = useState(false);
 
@@ -97,10 +99,10 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
     : "";
 
   return (
-    <main className="flex h-screen w-screen flex-col overflow-hidden text-slate-300 font-sans" style={{ backgroundColor: "#000000" }}>
+    <main className="min-h-screen w-full flex flex-col text-slate-300 font-sans pb-12" style={{ backgroundColor: "#000000" }}>
       {/* ── HEADER BAR (DICOM style) ────────────────────────────────── */}
       <header
-        className="flex h-12 w-full shrink-0 items-center justify-between px-4 border-b select-none"
+        className="flex h-12 w-full shrink-0 items-center justify-between px-4 border-b select-none sticky top-0 z-50"
         style={{ backgroundColor: "#1e222b", borderColor: "#2d313c" }}
       >
         {/* Left: Specimen ID tags */}
@@ -138,16 +140,16 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
         </div>
       </header>
 
-      {/* ── MAIN WORKSPACE ────────────────────────────────────────── */}
-      <div className="flex flex-1 w-full min-h-0 overflow-hidden">
-        
-        {/* ── CENTER GRID: 2x2 DICOM Image Viewer ────────────────── */}
-        <section className="flex-1 min-w-0 bg-[#000000] p-1 grid grid-cols-2 grid-rows-2 gap-1 border-r select-none" style={{ borderColor: "#2d313c" }}>
+      {/* ── WORKSPACE WRAPPER ────────────────────────────────────────── */}
+      <div className="mx-auto w-full max-w-[1440px] px-4 py-6 flex flex-col gap-6">
+
+        {/* ── TOP SECTION: 2x2 DICOM Viewer Grid (Generous 650px height) ── */}
+        <section className="h-[650px] w-full grid grid-cols-2 grid-rows-2 gap-1 border select-none bg-black" style={{ borderColor: "#2d313c" }}>
           
           {/* Quadrant 1: Localizer Specimen */}
           <div
             onClick={() => setSelectedViewport(1)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer group"
+            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
             style={{
               borderColor: selectedViewport === 1 ? "#fbbf24" : "#1a1a1f",
               backgroundColor: "#050505"
@@ -158,26 +160,15 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               <div>STUDY: LOCALIZER</div>
               <div>3PLAN SCAN</div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#fbbf24] font-bold pointer-events-none">
-              SR
-            </div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">
-              CORONAL
-            </div>
-
+            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#fbbf24] font-bold pointer-events-none">SR</div>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">CORONAL</div>
             <div className="flex-1 flex items-center justify-center p-6 min-h-0">
               {sourceImage ? (
-                <img
-                  src={sourceImage}
-                  alt="Source Specimen"
-                  className="max-h-full max-w-full object-contain border"
-                  style={{ borderColor: "#1f1f23" }}
-                />
+                <img src={sourceImage} alt="Source Specimen" className="max-h-full max-w-full object-contain border" style={{ borderColor: "#1f1f23" }} />
               ) : (
                 <span className="font-mono text-[10px] text-slate-600">NO LOCALIZER TARGET</span>
               )}
             </div>
-
             <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
               <div>Images: 1/1</div>
               <div>Wt: 256 / ww: 256</div>
@@ -192,7 +183,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
           {/* Quadrant 2: Agent A Attention */}
           <div
             onClick={() => setSelectedViewport(2)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer group"
+            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
             style={{
               borderColor: selectedViewport === 2 ? "#fbbf24" : "#1a1a1f",
               backgroundColor: "#050505"
@@ -203,26 +194,15 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               <div>SALIENCY: GRAD-CAM++</div>
               <div>LAYER: features.16</div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-blue-500 font-bold pointer-events-none">
-              AL
-            </div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">
-              SAGITTAL
-            </div>
-
+            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-blue-500 font-bold pointer-events-none">AL</div>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">SAGITTAL</div>
             <div className="flex-1 flex items-center justify-center p-6 min-h-0">
               {ws.attention ? (
-                <HeatmapCanvas
-                  b64={ws.attention.heatmap_a_b64}
-                  accent={AGENT_A.color}
-                  showOverlay={false}
-                  alt="Agent A Heatmap"
-                />
+                <HeatmapCanvas b64={ws.attention.heatmap_a_b64} accent={AGENT_A.color} showOverlay={false} alt="Agent A Heatmap" />
               ) : (
                 <span className="font-mono text-[10px] text-slate-600">AWAITING ATTENTION MATRIX</span>
               )}
             </div>
-
             <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
               <div>Target: {leadClass(aProbs) || "N/A"}</div>
               <div>Confidence: {(aConf * 100).toFixed(0)}%</div>
@@ -236,7 +216,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
           {/* Quadrant 3: Agent B Attention */}
           <div
             onClick={() => setSelectedViewport(3)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer group"
+            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
             style={{
               borderColor: selectedViewport === 3 ? "#fbbf24" : "#1a1a1f",
               backgroundColor: "#050505"
@@ -247,26 +227,15 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               <div>SALIENCY: ATTN ROLLOUT</div>
               <div>LAYER: cls_self_attn</div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-purple-400 font-bold pointer-events-none">
-              PF
-            </div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">
-              AXIAL
-            </div>
-
+            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-purple-400 font-bold pointer-events-none">PF</div>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">AXIAL</div>
             <div className="flex-1 flex items-center justify-center p-6 min-h-0">
               {ws.attention ? (
-                <HeatmapCanvas
-                  b64={ws.attention.heatmap_b_b64}
-                  accent={AGENT_B.color}
-                  showOverlay={false}
-                  alt="Agent B Heatmap"
-                />
+                <HeatmapCanvas b64={ws.attention.heatmap_b_b64} accent={AGENT_B.color} showOverlay={false} alt="Agent B Heatmap" />
               ) : (
                 <span className="font-mono text-[10px] text-slate-600">AWAITING ATTENTION MATRIX</span>
               )}
             </div>
-
             <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
               <div>Target: {leadClass(bProbs) || "N/A"}</div>
               <div>Confidence: {(bConf * 100).toFixed(0)}%</div>
@@ -280,7 +249,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
           {/* Quadrant 4: Disagreement / Alignment */}
           <div
             onClick={() => setSelectedViewport(4)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer group"
+            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
             style={{
               borderColor: selectedViewport === 4 ? "#fbbf24" : "#1a1a1f",
               backgroundColor: "#050505"
@@ -291,27 +260,15 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               <div>METHOD: ANOMALY DIFF</div>
               <div>TRIGGER: JS COMPUTE</div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#dc2626] font-bold pointer-events-none">
-              LH
-            </div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">
-              3D RECON
-            </div>
-
+            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#dc2626] font-bold pointer-events-none">LH</div>
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">3D RECON</div>
             <div className="flex-1 flex items-center justify-center p-6 min-h-0">
               {ws.attention ? (
-                <HeatmapCanvas
-                  b64={ws.attention.disagreement_b64}
-                  bbox={ws.attention.bbox}
-                  accent="#dc2626"
-                  showOverlay={true}
-                  alt="Disagreement Alignment"
-                />
+                <HeatmapCanvas b64={ws.attention.disagreement_b64} bbox={ws.attention.bbox} accent="#dc2626" showOverlay={true} alt="Disagreement Alignment" />
               ) : (
                 <span className="font-mono text-[10px] text-slate-600">AWAITING CROSS-ALIGNMENT MATRIX</span>
               )}
             </div>
-
             <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
               <div>Divergence: {ws.trigger ? ws.trigger.js_divergence.toFixed(4) : "0.0000"}</div>
               <div>Status: {ws.trigger?.fired ? "DEBATE TRIGGERED" : "FAST PATH"}</div>
@@ -321,142 +278,65 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               <div>Zoom: 100%</div>
             </div>
           </div>
-
         </section>
 
-        {/* ── RIGHT PANEL: stacked "Seriler" tray (Agent, consensus & log) ── */}
-        <aside className="w-[480px] shrink-0 border-l flex flex-col" style={{ backgroundColor: "#13161c", borderColor: "#2d313c" }}>
-          {/* Header */}
-          <div className="flex h-10 items-center justify-between px-4 border-b shrink-0" style={{ backgroundColor: "#1e222b", borderColor: "#2d313c" }}>
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#a1a1a6]">
-              Diagnostic Series (Seriler)
-            </span>
-            <span className="font-mono text-[9px] text-[#6b7280]">
-              4 Series Loaded
-            </span>
+        {/* ── MIDDLE ROW: Computation Gate Parameters ────────────────── */}
+        <section className="rounded border bg-[#13161c] p-2" style={{ borderColor: "#2d313c" }}>
+          <TriggerPanel trigger={ws.trigger} />
+        </section>
+
+        {/* ── BOTTOM SECTION: Three-Column Computational Deliberation Console ── */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch select-none">
+          
+          {/* Column 1: Agent Classifiers */}
+          <div className="rounded border flex flex-col gap-px" style={{ backgroundColor: "#2d313c", borderColor: "#2d313c" }}>
+            <div className="bg-[#13161c]">
+              <AgentScoreboard agentId="A" probs={aProbs} confidence={aConf} topClass={leadClass(aProbs)} status={statusFor("A", ws.agentA !== null)} />
+            </div>
+            <div className="bg-[#13161c] flex-1">
+              <AgentScoreboard agentId="B" probs={bProbs} confidence={bConf} topClass={leadClass(bProbs)} status={statusFor("B", ws.agentB !== null)} />
+            </div>
           </div>
 
-          {/* Series list */}
-          <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-            
-            {/* Series 1: Consensus Verdict (The primary series) */}
-            <div
-              onClick={() => setActiveSeries("consensus")}
-              className="rounded border p-1 cursor-pointer transition-all duration-200"
-              style={{
-                borderColor: activeSeries === "consensus" ? "#fbbf24" : "#2d313c",
-                backgroundColor: activeSeries === "consensus" ? "#1a1f28" : "#171b22",
-              }}
-            >
-              {/* Thumbnail header */}
-              <div className="flex items-center justify-between px-2 py-1 select-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-[#fbbf24]">1</span>
-                  <span className="font-mono text-[10px] text-[#e5e7eb] font-semibold">SERIES: CONSENSUS_VERDICT</span>
-                </div>
-                <span className="font-mono text-[9px] text-[#6b7280]">ECE FITTED</span>
+          {/* Column 2: Calibrated Consensus Verdict Details */}
+          <div className="rounded border p-4 bg-[#13161c]" style={{ borderColor: "#2d313c" }}>
+            {showConsensus && ws.consensus ? (
+              <ConsensusVerdict consensus={ws.consensus} trigger={ws.trigger} synthesis={recap} synthesisActive={false} />
+            ) : (
+              <div className="h-full flex flex-col justify-center items-center font-mono text-[10px] text-slate-500 gap-2">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-slate-600 animate-pulse" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>AWAITING FINAL RESOLUTION DECISION</span>
+                <span className="text-[8px] text-slate-600">ECE calibration metrics pending</span>
               </div>
-              
-              {/* Verdict component details inside series box */}
-              {showConsensus && ws.consensus ? (
-                <ConsensusVerdict
-                  consensus={ws.consensus}
-                  trigger={ws.trigger}
-                  synthesis={recap}
-                  synthesisActive={false}
-                />
-              ) : (
-                <div className="p-4 font-mono text-[11px] text-slate-500">
-                  {ws.phase === "error" ? "DIAGNOSTIC PROCESS FAILED" : "AWAITING PROCESS RESOLUTION"}
-                </div>
-              )}
-            </div>
-
-            {/* Series 2: Agent A analysis */}
-            <div
-              onClick={() => setActiveSeries("A")}
-              className="rounded border p-1 cursor-pointer transition-all duration-200"
-              style={{
-                borderColor: activeSeries === "A" ? "#fbbf24" : "#2d313c",
-                backgroundColor: activeSeries === "A" ? "#1a1f28" : "#171b22",
-              }}
-            >
-              <div className="flex items-center justify-between px-2 py-1 select-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-blue-500">2</span>
-                  <span className="font-mono text-[10px] text-[#e5e7eb] font-semibold">SERIES: CNN_CLASSIFIER</span>
-                </div>
-                <span className="font-mono text-[9px] text-[#6b7280]">8 CLASSES</span>
-              </div>
-              <AgentScoreboard
-                agentId="A"
-                probs={aProbs}
-                confidence={aConf}
-                topClass={leadClass(aProbs)}
-                status={statusFor("A", ws.agentA !== null)}
-              />
-            </div>
-
-            {/* Series 3: Agent B analysis */}
-            <div
-              onClick={() => setActiveSeries("B")}
-              className="rounded border p-1 cursor-pointer transition-all duration-200"
-              style={{
-                borderColor: activeSeries === "B" ? "#fbbf24" : "#2d313c",
-                backgroundColor: activeSeries === "B" ? "#1a1f28" : "#171b22",
-              }}
-            >
-              <div className="flex items-center justify-between px-2 py-1 select-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-purple-400">3</span>
-                  <span className="font-mono text-[10px] text-[#e5e7eb] font-semibold">SERIES: VIT_CLASSIFIER</span>
-                </div>
-                <span className="font-mono text-[9px] text-[#6b7280]">8 CLASSES</span>
-              </div>
-              <AgentScoreboard
-                agentId="B"
-                probs={bProbs}
-                confidence={bConf}
-                topClass={leadClass(bProbs)}
-                status={statusFor("B", ws.agentB !== null)}
-              />
-            </div>
-
-            {/* Series 4: Transaction Log */}
-            <div
-              onClick={() => setActiveSeries("log")}
-              className="rounded border p-1 cursor-pointer transition-all duration-200"
-              style={{
-                borderColor: activeSeries === "log" ? "#fbbf24" : "#2d313c",
-                backgroundColor: activeSeries === "log" ? "#1a1f28" : "#171b22",
-              }}
-            >
-              <div className="flex items-center justify-between px-2 py-1 select-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-[#6b7280]">4</span>
-                  <span className="font-mono text-[10px] text-[#e5e7eb] font-semibold">SERIES: DEBATE_AUDIT_LOG</span>
-                </div>
-                <span className="font-mono text-[9px] text-[#6b7280]">STREAM LIVE</span>
-              </div>
-              {(debate.active || debate.turns.length > 0) ? (
-                <DebateTranscript
-                  turns={debate.turns}
-                  agreement={debate.agreement}
-                  round={debate.round}
-                  converged={debate.converged}
-                  finished={debate.finished}
-                  active={debateRunning}
-                  convergedClass={convergedClass}
-                />
-              ) : (
-                <div className="p-4 font-mono text-[11px] text-slate-500">
-                  DEBATE TRANSCRIPT LOG EMPTY
-                </div>
-              )}
-            </div>
-
+            )}
           </div>
-        </aside>
+
+          {/* Column 3: Live Debate Audit Log (Scrolling panel) */}
+          <div className="rounded border bg-[#13161c]" style={{ borderColor: "#2d313c" }}>
+            {(debate.active || debate.turns.length > 0) ? (
+              <DebateTranscript
+                turns={debate.turns}
+                agreement={debate.agreement}
+                round={debate.round}
+                converged={debate.converged}
+                finished={debate.finished}
+                active={debateRunning}
+                convergedClass={convergedClass}
+              />
+            ) : (
+              <div className="h-full flex flex-col justify-center items-center font-mono text-[10px] text-slate-500 gap-2 p-10">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>LOG TRANSCRIPTION BUFFER EMPTY</span>
+                <span className="text-[8px] text-slate-600">Awaiting multi-agent debate trigger</span>
+              </div>
+            )}
+          </div>
+
+        </section>
 
       </div>
     </main>
