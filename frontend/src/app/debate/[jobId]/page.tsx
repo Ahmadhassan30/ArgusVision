@@ -20,6 +20,7 @@ import { loadJobImage } from "@/lib/sessionImage";
 import { getClassName } from "@/lib/constants";
 
 import HeatmapCanvas from "@/components/debate/HeatmapCanvas";
+import DebateTranscript from "@/components/debate/DebateTranscript";
 import { AGENT_A, AGENT_B } from "@/lib/constants";
 
 interface DebatePageProps {
@@ -82,6 +83,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
   const bProbs = debate.turns.length > 0 ? debate.beliefB : ws.agentB?.result.probabilities ?? null;
   const aConf = debate.turns.length > 0 ? debate.confA : ws.agentA?.result.confidence ?? 0;
   const bConf = debate.turns.length > 0 ? debate.confB : ws.agentB?.result.confidence ?? 0;
+  const convergedClass = debate.finished && debate.converged ? leadClass(debate.beliefA) : null;
 
   // Build high-fidelity Linux CLI terminal output logs
   const terminalLines = useMemo(() => {
@@ -196,28 +198,13 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
       );
     }
 
-    // Live alternating debate transcript
-    if (debate.turns.length > 0) {
+    // Live debate status log inside the terminal
+    if (debate.active || debate.turns.length > 0) {
       lines.push(
-        <div key="debate" className="text-neutral-400 font-mono text-[11px] space-y-2">
-          <div className="text-[#f97316] font-semibold">┌── [DEBATE] ADVERSARIAL REASONING LOG</div>
-          <div className="pl-4 border-l border-[#f97316]/30 space-y-3">
-            {debate.turns.map((turn, i) => {
-              const agentLabel = turn.agent === "A" ? "agent-a" : "agent-b";
-              const promptColor = turn.agent === "A" ? "text-sky-400" : "text-purple-400";
-              return (
-                <div key={i} className="space-y-0.5">
-                  <div className="text-[10px] font-semibold select-none">
-                    <span className={promptColor}>{agentLabel}</span>
-                    <span className="text-neutral-600">:~$</span>{" "}
-                    <span className="text-neutral-500">[{turn.move.toUpperCase()} · R{turn.round}]</span>
-                  </div>
-                  <div className="text-neutral-300 text-[11px] leading-relaxed">"{turn.text}"</div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="text-[#f97316] font-semibold">└────────────────────────────────────────────────────────</div>
+        <div key="debate_status" className="text-neutral-500 font-mono text-[11px] space-y-1">
+          <div>[DEBATE] Live adversarial negotiation active (Round {debate.round}).</div>
+          <div>[DEBATE] Redirecting live transcript text streams to Chat Console.</div>
+          {debate.finished && <div className="text-emerald-500 font-semibold">[DEBATE] Multi-agent negotiation converged. Consensus locked.</div>}
         </div>
       );
     }
@@ -298,145 +285,161 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
       {/* ── MAIN WORKSPACE ────────────────────────────────────────── */}
       <div className="flex flex-1 w-full min-h-0 overflow-hidden">
 
-        {/* ── LEFT: 2x2 DICOM Viewer Grid ─────────────────────────── */}
-        <section className="flex-1 min-w-0 p-1 grid grid-cols-2 grid-rows-2 gap-1 border-r select-none bg-black" style={{ borderColor: "#2d313c" }}>
-          
-          {/* Quadrant 1: Localizer Specimen */}
-          <div
-            onClick={() => setSelectedViewport(1)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
-            style={{
-              borderColor: selectedViewport === 1 ? "#fbbf24" : "#1a1a1f",
-              backgroundColor: "#050505"
-            }}
-          >
-            <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
-              <div>{formattedDate}</div>
-              <div>STUDY: LOCALIZER</div>
-              <div>3PLAN SCAN</div>
+        {/* ── LEFT AREA: 2x2 DICOM Viewer Grid + Bottom Debate Log ── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r" style={{ borderColor: "#2d313c" }}>
+          {/* Top: 2x2 Grid */}
+          <section className="flex-1 min-h-0 p-1 grid grid-cols-2 grid-rows-2 gap-1 select-none bg-black">
+            
+            {/* Quadrant 1: Localizer Specimen */}
+            <div
+              onClick={() => setSelectedViewport(1)}
+              className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
+              style={{
+                borderColor: selectedViewport === 1 ? "#fbbf24" : "#1a1a1f",
+                backgroundColor: "#050505"
+              }}
+            >
+              <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
+                <div>{formattedDate}</div>
+                <div>STUDY: LOCALIZER</div>
+                <div>3PLAN SCAN</div>
+              </div>
+              <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#fbbf24] font-bold pointer-events-none">SR</div>
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">CORONAL</div>
+              <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+                {sourceImage ? (
+                  <img src={sourceImage} alt="Source Specimen" className="max-h-full max-w-full object-contain border" style={{ borderColor: "#1f1f23" }} />
+                ) : (
+                  <span className="font-mono text-[10px] text-slate-600">NO LOCALIZER TARGET</span>
+                )}
+              </div>
+              <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
+                <div>Images: 1/1</div>
+                <div>Wt: 256 / ww: 256</div>
+                <div>Zoom: 100%</div>
+              </div>
+              <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
+                <div>Size: 224 x 224</div>
+                <div>Thick: 7.00 mm</div>
+              </div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#fbbf24] font-bold pointer-events-none">SR</div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">CORONAL</div>
-            <div className="flex-1 flex items-center justify-center p-6 min-h-0">
-              {sourceImage ? (
-                <img src={sourceImage} alt="Source Specimen" className="max-h-full max-w-full object-contain border" style={{ borderColor: "#1f1f23" }} />
-              ) : (
-                <span className="font-mono text-[10px] text-slate-600">NO LOCALIZER TARGET</span>
-              )}
-            </div>
-            <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
-              <div>Images: 1/1</div>
-              <div>Wt: 256 / ww: 256</div>
-              <div>Zoom: 100%</div>
-            </div>
-            <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
-              <div>Size: 224 x 224</div>
-              <div>Thick: 7.00 mm</div>
-            </div>
-          </div>
 
-          {/* Quadrant 2: Agent A Attention */}
-          <div
-            onClick={() => setSelectedViewport(2)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
-            style={{
-              borderColor: selectedViewport === 2 ? "#fbbf24" : "#1a1a1f",
-              backgroundColor: "#050505"
-            }}
-          >
-            <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
-              <div>AGENT A: CNN ANALYSIS</div>
-              <div>SALIENCY: GRAD-CAM++</div>
-              <div>LAYER: features.16</div>
+            {/* Quadrant 2: Agent A Attention */}
+            <div
+              onClick={() => setSelectedViewport(2)}
+              className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
+              style={{
+                borderColor: selectedViewport === 2 ? "#fbbf24" : "#1a1a1f",
+                backgroundColor: "#050505"
+              }}
+            >
+              <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
+                <div>AGENT A: CNN ANALYSIS</div>
+                <div>SALIENCY: GRAD-CAM++</div>
+                <div>LAYER: features.16</div>
+              </div>
+              <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-blue-500 font-bold pointer-events-none">AL</div>
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">SAGITTAL</div>
+              <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+                {ws.attention ? (
+                  <HeatmapCanvas b64={ws.attention.heatmap_a_b64} accent={AGENT_A.color} showOverlay={false} alt="Agent A Heatmap" />
+                ) : (
+                  <span className="font-mono text-[10px] text-slate-600">AWAITING ATTENTION MATRIX</span>
+                )}
+              </div>
+              <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
+                <div>Target: {leadClass(aProbs) || "N/A"}</div>
+                <div>Confidence: {(aConf * 100).toFixed(0)}%</div>
+              </div>
+              <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
+                <div>Size: 224 x 224</div>
+                <div>Zoom: 100%</div>
+              </div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-blue-500 font-bold pointer-events-none">AL</div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">SAGITTAL</div>
-            <div className="flex-1 flex items-center justify-center p-6 min-h-0">
-              {ws.attention ? (
-                <HeatmapCanvas b64={ws.attention.heatmap_a_b64} accent={AGENT_A.color} showOverlay={false} alt="Agent A Heatmap" />
-              ) : (
-                <span className="font-mono text-[10px] text-slate-600">AWAITING ATTENTION MATRIX</span>
-              )}
-            </div>
-            <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
-              <div>Target: {leadClass(aProbs) || "N/A"}</div>
-              <div>Confidence: {(aConf * 100).toFixed(0)}%</div>
-            </div>
-            <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
-              <div>Size: 224 x 224</div>
-              <div>Zoom: 100%</div>
-            </div>
-          </div>
 
-          {/* Quadrant 3: Agent B Attention */}
-          <div
-            onClick={() => setSelectedViewport(3)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
-            style={{
-              borderColor: selectedViewport === 3 ? "#fbbf24" : "#1a1a1f",
-              backgroundColor: "#050505"
-            }}
-          >
-            <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
-              <div>AGENT B: ViT ANALYSIS</div>
-              <div>SALIENCY: ATTN ROLLOUT</div>
-              <div>LAYER: cls_self_attn</div>
+            {/* Quadrant 3: Agent B Attention */}
+            <div
+              onClick={() => setSelectedViewport(3)}
+              className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
+              style={{
+                borderColor: selectedViewport === 3 ? "#fbbf24" : "#1a1a1f",
+                backgroundColor: "#050505"
+              }}
+            >
+              <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
+                <div>AGENT B: ViT ANALYSIS</div>
+                <div>SALIENCY: ATTN ROLLOUT</div>
+                <div>LAYER: cls_self_attn</div>
+              </div>
+              <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-purple-400 font-bold pointer-events-none">PF</div>
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">AXIAL</div>
+              <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+                {ws.attention ? (
+                  <HeatmapCanvas b64={ws.attention.heatmap_b_b64} accent={AGENT_B.color} showOverlay={false} alt="Agent B Heatmap" />
+                ) : (
+                  <span className="font-mono text-[10px] text-slate-600">AWAITING ATTENTION MATRIX</span>
+                )}
+              </div>
+              <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
+                <div>Target: {leadClass(bProbs) || "N/A"}</div>
+                <div>Confidence: {(bConf * 100).toFixed(0)}%</div>
+              </div>
+              <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
+                <div>Size: 224 x 224</div>
+                <div>Zoom: 100%</div>
+              </div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-purple-400 font-bold pointer-events-none">PF</div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">AXIAL</div>
-            <div className="flex-1 flex items-center justify-center p-6 min-h-0">
-              {ws.attention ? (
-                <HeatmapCanvas b64={ws.attention.heatmap_b_b64} accent={AGENT_B.color} showOverlay={false} alt="Agent B Heatmap" />
-              ) : (
-                <span className="font-mono text-[10px] text-slate-600">AWAITING ATTENTION MATRIX</span>
-              )}
-            </div>
-            <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
-              <div>Target: {leadClass(bProbs) || "N/A"}</div>
-              <div>Confidence: {(bConf * 100).toFixed(0)}%</div>
-            </div>
-            <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
-              <div>Size: 224 x 224</div>
-              <div>Zoom: 100%</div>
-            </div>
-          </div>
 
-          {/* Quadrant 4: Disagreement / Alignment */}
-          <div
-            onClick={() => setSelectedViewport(4)}
-            className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
-            style={{
-              borderColor: selectedViewport === 4 ? "#fbbf24" : "#1a1a1f",
-              backgroundColor: "#050505"
-            }}
-          >
-            <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
-              <div>CROSS-ALIGNMENT DETECTOR</div>
-              <div>METHOD: ANOMALY DIFF</div>
-              <div>TRIGGER: JS COMPUTE</div>
+            {/* Quadrant 4: Disagreement / Alignment */}
+            <div
+              onClick={() => setSelectedViewport(4)}
+              className="relative flex flex-col items-stretch overflow-hidden border cursor-pointer"
+              style={{
+                borderColor: selectedViewport === 4 ? "#fbbf24" : "#1a1a1f",
+                backgroundColor: "#050505"
+              }}
+            >
+              <div className="absolute top-2 left-2 z-10 font-mono text-[9px] text-[#9ca3af] leading-tight pointer-events-none">
+                <div>CROSS-ALIGNMENT DETECTOR</div>
+                <div>METHOD: ANOMALY DIFF</div>
+                <div>TRIGGER: JS COMPUTE</div>
+              </div>
+              <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#dc2626] font-bold pointer-events-none">LH</div>
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">3D RECON</div>
+              <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+                {ws.attention ? (
+                  <HeatmapCanvas b64={ws.attention.disagreement_b64} bbox={ws.attention.bbox} accent="#dc2626" showOverlay={true} alt="Disagreement Alignment" />
+                ) : (
+                  <span className="font-mono text-[10px] text-slate-600">AWAITING CROSS-ALIGNMENT MATRIX</span>
+                )}
+              </div>
+              <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
+                <div>Divergence: {ws.trigger ? ws.trigger.js_divergence.toFixed(4) : "0.0000"}</div>
+                <div>Status: {ws.trigger?.fired ? "DEBATE TRIGGERED" : "FAST PATH"}</div>
+              </div>
+              <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
+                <div>Size: 224 x 224</div>
+                <div>Zoom: 100%</div>
+              </div>
             </div>
-            <div className="absolute top-2 right-2 z-10 font-mono text-[9px] text-[#dc2626] font-bold pointer-events-none">LH</div>
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 font-mono text-[10px] text-[#9ca3af] tracking-wider pointer-events-none">3D RECON</div>
-            <div className="flex-1 flex items-center justify-center p-6 min-h-0">
-              {ws.attention ? (
-                <HeatmapCanvas b64={ws.attention.disagreement_b64} bbox={ws.attention.bbox} accent="#dc2626" showOverlay={true} alt="Disagreement Alignment" />
-              ) : (
-                <span className="font-mono text-[10px] text-slate-600">AWAITING CROSS-ALIGNMENT MATRIX</span>
-              )}
-            </div>
-            <div className="absolute bottom-2 left-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight pointer-events-none">
-              <div>Divergence: {ws.trigger ? ws.trigger.js_divergence.toFixed(4) : "0.0000"}</div>
-              <div>Status: {ws.trigger?.fired ? "DEBATE TRIGGERED" : "FAST PATH"}</div>
-            </div>
-            <div className="absolute bottom-2 right-2 z-10 font-mono text-[9px] text-[#6b7280] leading-tight text-right pointer-events-none">
-              <div>Size: 224 x 224</div>
-              <div>Zoom: 100%</div>
-            </div>
+          </section>
+
+          {/* Bottom: Debate Transcript in Chat Form */}
+          <div className="h-[285px] shrink-0 border-t" style={{ borderColor: "#2d313c" }}>
+            <DebateTranscript
+              turns={debate.turns}
+              agreement={debate.agreement}
+              round={debate.round}
+              converged={debate.converged}
+              finished={debate.finished}
+              active={debateRunning}
+              convergedClass={convergedClass}
+            />
           </div>
-        </section>
+        </div>
 
         {/* ── RIGHT: Portrait Diagnostic Terminal Console ─────────── */}
-        <aside className="w-[450px] shrink-0 border-l flex flex-col overflow-hidden select-text" style={{ backgroundColor: "#13161c", borderColor: "#2d313c" }}>
+        <aside className="w-[450px] shrink-0 flex flex-col overflow-hidden select-text" style={{ backgroundColor: "#13161c", borderColor: "#2d313c" }}>
           {/* Terminal Window Header */}
           <div className="flex items-center gap-2 bg-neutral-900 px-4 py-3 border-b border-neutral-800 shrink-0 select-none">
             <div className="flex items-center gap-1.5 shrink-0">
