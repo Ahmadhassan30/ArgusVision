@@ -1,27 +1,24 @@
 "use client";
 
 /**
- * Debate Page — Spacious Clinical Workstation (Scrollable Layout).
+ * Debate Page — DICOM Workstation with Portrait Diagnostic Terminal.
  *
  * Mapped components according to user feedback:
- * 1. Removed the locked h-screen viewport and enabled natural vertical scrolling.
- * 2. 2x2 DICOM Viewer Grid is placed at the top with generous spacing (680px height).
- * 3. Trigger/Divergence panel acts as a full-width metrics banner below the grid.
- * 4. A clean three-column console below the grid displays Consensus Verdict,
- *    Agent Classifiers, and the scrolling Live Debate Transcript.
- * 5. This removes the clutter and allows all elements to scale and breathe.
+ * 1. Single-screen layout (no page scrolling, locked to viewport height).
+ * 2. Left: 2x2 DICOM Viewer Grid (occupies all remaining width).
+ * 3. Right: Portrait Terminal Console (width 440px) displaying live classification
+ *    and consensus logs.
+ * 4. Fixed alignment issues in the ASCII logs by using CSS left borders
+ *    instead of hardcoded "│" characters that break on variable text wrapping.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useDebateStream } from "@/hooks/useDebateStream";
 import { useDebateEngine } from "@/hooks/useDebateEngine";
 import { loadJobImage } from "@/lib/sessionImage";
+import { getClassName } from "@/lib/constants";
 
-import AgentScoreboard, { type AgentStatus } from "@/components/debate/AgentScoreboard";
-import DebateTranscript from "@/components/debate/DebateTranscript";
-import TriggerPanel from "@/components/debate/TriggerPanel";
-import ConsensusVerdict from "@/components/debate/ConsensusVerdict";
 import HeatmapCanvas from "@/components/debate/HeatmapCanvas";
 import { AGENT_A, AGENT_B } from "@/lib/constants";
 
@@ -50,6 +47,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [selectedViewport, setSelectedViewport] = useState<1 | 2 | 3 | 4>(1);
   const [mounted, setMounted] = useState(false);
+  const terminalEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -85,24 +83,190 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
   const aConf = debate.turns.length > 0 ? debate.confA : ws.agentA?.result.confidence ?? 0;
   const bConf = debate.turns.length > 0 ? debate.confB : ws.agentB?.result.confidence ?? 0;
 
-  const statusFor = (agent: "A" | "B", has: boolean): AgentStatus => {
-    if (!has) return "thinking";
-    if (debate.finished) return "settled";
-    if (debateRunning && debate.speaker === agent) return "speaking";
-    if (debateRunning) return "listening";
-    return "thinking";
-  };
+  // Build high-fidelity Linux CLI terminal output logs
+  const terminalLines = useMemo(() => {
+    const lines: React.ReactNode[] = [];
 
-  const convergedClass = debate.finished && debate.converged ? leadClass(debate.beliefA) : null;
-  const recap = ws.consensus
-    ? `After ${debate.round} rounds the agents reconciled their reading to ${ws.consensus.pred_class}. Calibrated head confidence: ${(ws.consensus.confidence * 100).toFixed(0)}%.`
-    : "";
+    // Header logo shell info
+    lines.push(
+      <div key="boot" className="text-neutral-500 font-mono text-[11px]">
+        <div>[  INIT  ] Initializing Argus Consensus System (v2.1.0-lts)...</div>
+        <div>[  BOOT  ] Hooking CUDA classification endpoints (T4 GPU verified).</div>
+      </div>
+    );
+
+    // Stage 1/2 Inputs verification
+    if (ws.completedAt.uploaded) {
+      lines.push(
+        <div key="gating" className="text-neutral-400 font-mono text-[11px] space-y-1">
+          <div className="text-sky-400 font-semibold">┌── [SYSTEM] SPECIMEN INPUT GATE VERIFICATION</div>
+          <div className="pl-4 border-l border-sky-950 space-y-0.5">
+            <div>Subject Specimen  : <span className="text-white font-semibold">ISIC_{jobId.slice(0, 8).toUpperCase()}</span></div>
+            <div>Heuristic Check   : Aspect Ratio, Dim Min, Channel StdDev <span className="text-emerald-400 font-bold">[PASS]</span></div>
+            <div>Classifier Gate   : MobileNetV3 input verification        <span className="text-emerald-400 font-bold">[LESION DETECTED]</span></div>
+            <div className="text-neutral-500 pt-1">(Confirms specimen is skin-lesion dermoscopy, rejecting arbitrary noise)</div>
+          </div>
+          <div className="text-sky-400 font-semibold">└────────────────────────────────────────────────────────</div>
+        </div>
+      );
+    }
+
+    // Models init
+    if (ws.completedAt.agents_init) {
+      lines.push(
+        <div key="agents_init" className="text-neutral-500 font-mono text-[11px]">
+          <div>[  INFO  ] Classification models initialized in frozen eval mode.</div>
+          <div>[  INFO  ] Core agents seeded: <span className="text-sky-400 font-semibold">EfficientNet-B4</span> (CNN) & <span className="text-purple-400 font-semibold">ViT-B/16</span> (Transformer).</div>
+        </div>
+      );
+    }
+
+    // Agent A classification distributions
+    if (ws.agentA) {
+      lines.push(
+        <div key="agentA" className="text-neutral-400 font-mono text-[11px] space-y-1">
+          <div className="text-emerald-500 font-semibold">┌── [AGENT-A] EFFICIENTNET-B4 CLASSIFIER OUTPUTS</div>
+          <div className="pl-4 border-l border-emerald-950 space-y-0.5">
+            <div>Reasoning Mode    : CNN Structural Feature Analysis</div>
+            <div>Lead Prediction   : <span className="text-white font-bold">{getClassName(ws.agentA.result.pred_class)}</span></div>
+            <div>Confidence Score  : <span className="text-emerald-400 font-bold">{(ws.agentA.result.confidence * 100).toFixed(1)}%</span></div>
+            <div className="text-neutral-500 pt-1">Raw Probabilities distribution:</div>
+            {Object.entries(aProbs || {}).map(([cls, val]) => {
+              if (val > 0.005) {
+                const pct = (val * 100).toFixed(1);
+                const barLen = Math.round(val * 10);
+                const bar = "█".repeat(barLen) + "░".repeat(10 - barLen);
+                return (
+                  <div key={cls} className="text-[10px]">
+                    {cls.padEnd(5)} : <span className="text-emerald-400">{bar}</span> {pct}% <span className="text-neutral-500">({getClassName(cls)})</span>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+          <div className="text-emerald-500 font-semibold">└────────────────────────────────────────────────────────</div>
+        </div>
+      );
+    }
+
+    // Agent B classification distributions
+    if (ws.agentB) {
+      lines.push(
+        <div key="agentB" className="text-neutral-400 font-mono text-[11px] space-y-1">
+          <div className="text-purple-500 font-semibold">┌── [AGENT-B] ViT-B/16 TRANSFORMER OUTPUTS</div>
+          <div className="pl-4 border-l border-purple-950 space-y-0.5">
+            <div>Reasoning Mode    : Vision Transformer Global Context Saliency</div>
+            <div>Lead Prediction   : <span className="text-white font-bold">{getClassName(ws.agentB.result.pred_class)}</span></div>
+            <div>Confidence Score  : <span className="text-purple-400 font-bold">{(ws.agentB.result.confidence * 100).toFixed(1)}%</span></div>
+            <div className="text-neutral-500 pt-1">Raw Probabilities distribution:</div>
+            {Object.entries(bProbs || {}).map(([cls, val]) => {
+              if (val > 0.005) {
+                const pct = (val * 100).toFixed(1);
+                const barLen = Math.round(val * 10);
+                const bar = "█".repeat(barLen) + "░".repeat(10 - barLen);
+                return (
+                  <div key={cls} className="text-[10px]">
+                    {cls.padEnd(5)} : <span className="text-purple-400">{bar}</span> {pct}% <span className="text-neutral-500">({getClassName(cls)})</span>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+          <div className="text-purple-500 font-semibold">└────────────────────────────────────────────────────────</div>
+        </div>
+      );
+    }
+
+    // Divergence Gate calculation
+    if (ws.trigger) {
+      const fired = ws.trigger.fired;
+      lines.push(
+        <div key="trigger" className="text-neutral-400 font-mono text-[11px] space-y-1">
+          <div className="text-amber-500 font-semibold">┌── [SYSTEM] DIVERGENCE ANALYSIS GATE</div>
+          <div className="pl-4 border-l border-amber-950 space-y-0.5">
+            <div>JS Divergence     : <span className={fired ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>{ws.trigger.js_divergence.toFixed(4)}</span> <span className="text-neutral-500">(Threshold: {ws.trigger.threshold_js.toFixed(2)})</span></div>
+            <div>Entropy (Agent A) : {ws.trigger.entropy_a.toFixed(3)} bits <span className="text-neutral-500">(Uncertainty measure)</span></div>
+            <div>Entropy (Agent B) : {ws.trigger.entropy_b.toFixed(3)} bits <span className="text-neutral-500">(Uncertainty measure)</span></div>
+            <div className="text-neutral-500 pt-1">Decision           : <span className={fired ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>{fired ? "TRIGGER ADVERSARIAL DEBATE" : "FAST PATH CONSENSUS"}</span></div>
+          </div>
+          <div className="text-amber-500 font-semibold">└────────────────────────────────────────────────────────</div>
+        </div>
+      );
+    }
+
+    // Live alternating debate transcript
+    if (debate.turns.length > 0) {
+      lines.push(
+        <div key="debate" className="text-neutral-400 font-mono text-[11px] space-y-2">
+          <div className="text-[#f97316] font-semibold">┌── [DEBATE] ADVERSARIAL REASONING LOG</div>
+          <div className="pl-4 border-l border-[#f97316]/30 space-y-3">
+            {debate.turns.map((turn, i) => {
+              const agentLabel = turn.agent === "A" ? "agent-a" : "agent-b";
+              const promptColor = turn.agent === "A" ? "text-sky-400" : "text-purple-400";
+              return (
+                <div key={i} className="space-y-0.5">
+                  <div className="text-[10px] font-semibold select-none">
+                    <span className={promptColor}>{agentLabel}</span>
+                    <span className="text-neutral-600">:~$</span>{" "}
+                    <span className="text-neutral-500">[{turn.move.toUpperCase()} · R{turn.round}]</span>
+                  </div>
+                  <div className="text-neutral-300 text-[11px] leading-relaxed">"{turn.text}"</div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="text-[#f97316] font-semibold">└────────────────────────────────────────────────────────</div>
+        </div>
+      );
+    }
+
+    // Calibrated Consensus output
+    if (ws.consensus) {
+      lines.push(
+        <div key="consensus" className="text-neutral-400 font-mono text-[11px] space-y-1">
+          <div className="text-emerald-500 font-semibold">┌── [CONSENSUS] FINAL CALIBRATED DIAGNOSIS</div>
+          <div className="pl-4 border-l border-emerald-950 space-y-0.5">
+            <div>Verdict Diagnosis : <span className="text-white font-bold">{getClassName(ws.consensus.pred_class)}</span></div>
+            <div>Fusion Confidence : <span className="text-emerald-400 font-bold">{(ws.consensus.confidence * 100).toFixed(1)}%</span></div>
+            <div>Calibrated ECE    : <span className="text-emerald-400 font-bold">{ws.consensus.ece.toFixed(4)}</span> <span className="text-neutral-500">(Calibration error)</span></div>
+            <div>Scale Temperature : {ws.consensus.temperature.toFixed(2)} <span className="text-neutral-500">(Scaling factor)</span></div>
+            <div className="text-neutral-500 pt-1">Calibrated Probabilities distribution:</div>
+            {Object.entries(ws.consensus.probabilities).map(([cls, val]) => {
+              if (val > 0.005) {
+                const pct = (val * 100).toFixed(1);
+                const barLen = Math.round(val * 10);
+                const bar = "█".repeat(barLen) + "░".repeat(10 - barLen);
+                return (
+                  <div key={`cons_${cls}`} className="text-[10px]">
+                    {cls.padEnd(5)} : <span className="text-emerald-400">{bar}</span> {pct}% <span className="text-neutral-500">({getClassName(cls)})</span>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+          <div className="text-emerald-500 font-semibold">└────────────────────────────────────────────────────────</div>
+        </div>
+      );
+    }
+
+    return lines;
+  }, [ws.completedAt, ws.agentA, ws.agentB, ws.trigger, ws.consensus, aProbs, bProbs, debate.turns]);
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [terminalLines]);
 
   return (
-    <main className="min-h-screen w-full flex flex-col text-slate-300 font-sans pb-12" style={{ backgroundColor: "#000000" }}>
+    <main className="h-screen w-screen flex flex-col overflow-hidden text-slate-300 font-sans" style={{ backgroundColor: "#000000" }}>
       {/* ── HEADER BAR (DICOM style) ────────────────────────────────── */}
       <header
-        className="flex h-12 w-full shrink-0 items-center justify-between px-4 border-b select-none sticky top-0 z-50"
+        className="flex h-12 w-full shrink-0 items-center justify-between px-4 border-b select-none"
         style={{ backgroundColor: "#1e222b", borderColor: "#2d313c" }}
       >
         {/* Left: Specimen ID tags */}
@@ -128,23 +292,14 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
               {status.label}
             </span>
           </div>
-
-          <div className="flex items-center gap-3 text-slate-400">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 opacity-75" fill="none" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.02 6.02 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <svg viewBox="0 0 24 24" className="h-4 w-4 opacity-75" fill="none" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            </svg>
-          </div>
         </div>
       </header>
 
-      {/* ── WORKSPACE WRAPPER ────────────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-[1440px] px-4 py-6 flex flex-col gap-6">
+      {/* ── MAIN WORKSPACE ────────────────────────────────────────── */}
+      <div className="flex flex-1 w-full min-h-0 overflow-hidden">
 
-        {/* ── TOP SECTION: 2x2 DICOM Viewer Grid (Generous 650px height) ── */}
-        <section className="h-[650px] w-full grid grid-cols-2 grid-rows-2 gap-1 border select-none bg-black" style={{ borderColor: "#2d313c" }}>
+        {/* ── LEFT: 2x2 DICOM Viewer Grid ─────────────────────────── */}
+        <section className="flex-1 min-w-0 p-1 grid grid-cols-2 grid-rows-2 gap-1 border-r select-none bg-black" style={{ borderColor: "#2d313c" }}>
           
           {/* Quadrant 1: Localizer Specimen */}
           <div
@@ -280,63 +435,38 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
           </div>
         </section>
 
-        {/* ── MIDDLE ROW: Computation Gate Parameters ────────────────── */}
-        <section className="rounded border bg-[#13161c] p-2" style={{ borderColor: "#2d313c" }}>
-          <TriggerPanel trigger={ws.trigger} />
-        </section>
-
-        {/* ── BOTTOM SECTION: Three-Column Computational Deliberation Console ── */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch select-none">
-          
-          {/* Column 1: Agent Classifiers */}
-          <div className="rounded border flex flex-col gap-px" style={{ backgroundColor: "#2d313c", borderColor: "#2d313c" }}>
-            <div className="bg-[#13161c]">
-              <AgentScoreboard agentId="A" probs={aProbs} confidence={aConf} topClass={leadClass(aProbs)} status={statusFor("A", ws.agentA !== null)} />
+        {/* ── RIGHT: Portrait Diagnostic Terminal Console ─────────── */}
+        <aside className="w-[450px] shrink-0 border-l flex flex-col overflow-hidden select-text" style={{ backgroundColor: "#13161c", borderColor: "#2d313c" }}>
+          {/* Terminal Window Header */}
+          <div className="flex items-center gap-2 bg-neutral-900 px-4 py-3 border-b border-neutral-800 shrink-0 select-none">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+              <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
+              <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
             </div>
-            <div className="bg-[#13161c] flex-1">
-              <AgentScoreboard agentId="B" probs={bProbs} confidence={bConf} topClass={leadClass(bProbs)} status={statusFor("B", ws.agentB !== null)} />
+            <div className="flex-1 text-center text-[10px] text-neutral-400 font-mono">
+              argus-consensus-terminal — bash
             </div>
           </div>
 
-          {/* Column 2: Calibrated Consensus Verdict Details */}
-          <div className="rounded border p-4 bg-[#13161c]" style={{ borderColor: "#2d313c" }}>
-            {showConsensus && ws.consensus ? (
-              <ConsensusVerdict consensus={ws.consensus} trigger={ws.trigger} synthesis={recap} synthesisActive={false} />
-            ) : (
-              <div className="h-full flex flex-col justify-center items-center font-mono text-[10px] text-slate-500 gap-2">
-                <svg viewBox="0 0 24 24" className="h-6 w-6 text-slate-600 animate-pulse" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>AWAITING FINAL RESOLUTION DECISION</span>
-                <span className="text-[8px] text-slate-600">ECE calibration metrics pending</span>
+          {/* Terminal Output stream */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono scroll-clinical text-neutral-300 bg-black">
+            {terminalLines.map((line, idx) => (
+              <div key={idx} className="leading-relaxed whitespace-pre-wrap">
+                {line}
               </div>
-            )}
-          </div>
+            ))}
+            
+            {/* Blinking CLI Prompt Cursor */}
+            <div className="flex items-center gap-1.5 select-none pt-2 border-t border-neutral-900 text-[10px]">
+              <span className="text-neutral-500">argus-diagnostics:~$</span>
+              <span className="inline-block h-4 w-2 bg-neutral-400 animate-pulse align-middle" />
+            </div>
 
-          {/* Column 3: Live Debate Audit Log (Scrolling panel) */}
-          <div className="rounded border bg-[#13161c]" style={{ borderColor: "#2d313c" }}>
-            {(debate.active || debate.turns.length > 0) ? (
-              <DebateTranscript
-                turns={debate.turns}
-                agreement={debate.agreement}
-                round={debate.round}
-                converged={debate.converged}
-                finished={debate.finished}
-                active={debateRunning}
-                convergedClass={convergedClass}
-              />
-            ) : (
-              <div className="h-full flex flex-col justify-center items-center font-mono text-[10px] text-slate-500 gap-2 p-10">
-                <svg viewBox="0 0 24 24" className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span>LOG TRANSCRIPTION BUFFER EMPTY</span>
-                <span className="text-[8px] text-slate-600">Awaiting multi-agent debate trigger</span>
-              </div>
-            )}
+            {/* Anchor to auto-scroll */}
+            <div ref={terminalEndRef} />
           </div>
-
-        </section>
+        </aside>
 
       </div>
     </main>

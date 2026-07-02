@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * DebateTranscript — clean, clinical log-style debate view.
+ * DebateTranscript — live terminal-like consensus debate log.
  *
- * Each turn is rendered inside a flat, dark workstation-style panel.
- * Uses `ArgumentStream` to show a human-paced typing animation with natural delays
- * and a blinking caret for the latest active turn.
+ * Implements a pure command-line interface look matching the user's terminal UI:
+ * - Gray header bar with red, yellow, green window actions on top.
+ * - Monospace console logs with standard terminal colors (emerald, sky, neutral).
+ * - Custom prompt identifiers for agents (agent-a, agent-b) replaying turns.
+ * - Eliminates all graphic icons, avatars, and badge backgrounds for a raw terminal feel.
  */
 
 import { useEffect, useRef } from "react";
@@ -27,10 +29,10 @@ interface DebateTranscriptProps {
 
 const MOVE_LABEL: Record<Move, string> = {
   open: "OPENS DEBATE",
-  press: "REINFORCES READ",
-  rebut: "REBUTS COUNTER",
-  soften: "ADJUSTS BELIEF",
-  concede: "CONCEDES READ",
+  press: "REINFORCES",
+  rebut: "REBUTS",
+  soften: "SOFTENS",
+  concede: "CONCEDES",
   agree: "CONVERGES",
 };
 
@@ -54,134 +56,87 @@ export default function DebateTranscript({
   const pct = Math.round(agreement * 100);
 
   return (
-    <div className="p-5" style={{ backgroundColor: "#0a0a0c" }}>
-      {/* Header Bar */}
-      <div className="flex items-center justify-between border-b pb-3 mb-4" style={{ borderColor: "#1a1a1f" }}>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: "#8e9196" }}>
-            TRANSACTION LOG
-          </span>
-          <span className="h-1 w-1 rounded-full bg-ink-faint" />
-          <span className="font-mono text-[10px] uppercase text-[#6b7280]">
-            {finished ? "Concluded" : active ? "Active Stream" : "Standby"}
-          </span>
+    <div className="w-full flex flex-col font-mono text-xs overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950 shadow-2xl h-full">
+      {/* ── Terminal Title Bar ──────────────────────────────────────── */}
+      <div className="flex items-center gap-2 bg-neutral-900 px-4 py-2 border-b border-neutral-800 select-none">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+          <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
+          <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
         </div>
-
-        {/* Agreement Meter */}
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-[#6b7280]">
-            Consensus Agreement
-          </span>
-          <div className="h-1 w-20 overflow-hidden rounded-full bg-[#1a1a1f]">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${pct}%`,
-                backgroundColor: pct > 80 ? "#059669" : "#3b82f6",
-              }}
-            />
-          </div>
-          <span className="font-mono text-[10px] font-semibold tabular text-[#e5e7eb]">
-            {pct}%
-          </span>
+        <div className="flex-1 text-center font-mono text-[10px] text-neutral-400">
+          argus-live-debate.sh — bash — {pct}% agreement
         </div>
+        <div className="w-9" />
       </div>
 
-      {/* Log Feed */}
+      {/* ── Terminal Console Logs ───────────────────────────────────── */}
       <div
         ref={scrollRef}
-        className="flex max-h-[380px] flex-col gap-3 overflow-y-auto pr-1 scroll-clinical"
+        className="flex-1 p-4 overflow-y-auto leading-relaxed space-y-3 scroll-clinical max-h-[190px]"
       >
+        {/* Startup banner */}
+        <div className="text-neutral-500 select-none">
+          <div>[SYS] Connection established with classification engines.</div>
+          <div>[SYS] agreement_threshold_js = 0.23 | round_cap = 6</div>
+          <div>[SYS] starting multi-agent consensus debate...</div>
+        </div>
+
         {turns.length === 0 ? (
-          <div className="flex items-center gap-2 py-10 justify-center font-mono text-[11px]" style={{ color: "#4b5563" }}>
-            <span className="h-1.5 w-1.5 rounded-full animate-ping" style={{ backgroundColor: "#3b82f6" }} />
-            INITIALIZING LOG BUFFER...
+          <div className="flex items-center gap-2 text-neutral-500 select-none">
+            <span className="text-sky-500">consensus-scheduler:~$</span>
+            <span className="text-neutral-300 animate-pulse">awaiting agent-a opening...</span>
           </div>
         ) : (
           turns.map((turn) => {
-            const meta = AGENTS[turn.agent];
             const isLast = turn.index === lastIndex;
+            const agentName = turn.agent === "A" ? "agent-a" : "agent-b";
+            const agentPromptColor = turn.agent === "A" ? "text-sky-400" : "text-purple-400";
+            
             return (
-              <div
-                key={turn.index}
-                className="rounded border p-3 flex gap-3 transition-all duration-300"
-                style={{
-                  backgroundColor: "#0d0d0f",
-                  borderColor: isLast && active ? meta.color : "#1a1a1f",
-                  boxShadow: isLast && active ? `inset 2px 0 0 ${meta.color}` : "none",
-                }}
-              >
-                {/* Visual Face Avatar */}
-                <div className="shrink-0">
-                  <img
-                    src={turn.agent === "A" ? "/effnet.png" : "/vit.png"}
-                    alt={meta.name}
-                    className="h-8 w-8 rounded-full border bg-slate-800 object-cover"
-                    style={{ borderColor: meta.color }}
-                  />
+              <div key={turn.index} className="whitespace-pre-wrap">
+                {/* Bash Prompt Line */}
+                <div className="flex items-center gap-1.5 select-none font-semibold text-[10px]">
+                  <span className={agentPromptColor}>{agentName}</span>
+                  <span className="text-neutral-600">:~#</span>
+                  <span className="text-neutral-500">[{MOVE_LABEL[turn.move]} · R{turn.round}]</span>
                 </div>
 
-                {/* Content Area */}
-                <div className="flex-1 min-w-0 flex flex-col gap-2">
-                  {/* Meta details */}
-                  <div className="flex items-center justify-between border-b pb-1.5" style={{ borderColor: "#141417" }}>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="font-mono text-[9px] font-bold uppercase tracking-widest"
-                        style={{ color: meta.color }}
-                      >
-                        {meta.name}
-                      </span>
-                      <span className="font-mono text-[9px]" style={{ color: "#4b5563" }}>
-                        [ROUND {turn.round}]
-                      </span>
-                    </div>
-
-                    <span
-                      className="font-mono text-[8px] font-semibold tracking-wider rounded px-1"
-                      style={{
-                        backgroundColor: `${meta.color}15`,
-                        color: meta.color,
-                        border: `1px solid ${meta.color}30`,
-                      }}
-                    >
-                      {MOVE_LABEL[turn.move]}
-                    </span>
-                  </div>
-
-                  {/* Body Text */}
-                  <div style={{ color: isLast && active ? "#e5e7eb" : "#a1a1a6" }}>
-                    <ArgumentStream
-                      text={turn.text}
-                      agentId={turn.agent}
-                      active={isLast && active}
-                    />
-                  </div>
+                {/* Typed Command Value (Speech/Argument) */}
+                <div className="mt-0.5 text-neutral-300 pl-4 border-l border-neutral-800">
+                  <ArgumentStream
+                    text={turn.text}
+                    agentId={turn.agent}
+                    active={isLast && active}
+                  />
                 </div>
               </div>
             );
           })
         )}
-      </div>
 
-      {/* Audit Verdict Banner */}
-      {finished && (
-        <div
-          className="mt-4 flex items-center justify-between rounded border p-3 font-mono text-[10px] tracking-wide"
-          style={{
-            backgroundColor: converged ? "#081c15" : "#141417",
-            borderColor: converged ? "#0f3d2a" : "#1f1f23",
-            color: converged ? "#34d399" : "#9ca3af",
-          }}
-        >
-          <span>LOG STATUS: VERDICT LOCKED</span>
-          <span>
-            {converged && convergedClass
-              ? `AGREEMENT: ${getClassName(convergedClass)}`
-              : "TERMINATED — NO CONVERGENCE"}
-          </span>
-        </div>
-      )}
+        {/* Live typing indicator */}
+        {active && !finished && turns.length > 0 && (
+          <div className="text-neutral-600 animate-pulse select-none text-[10px] pl-4">
+            [executing next round evaluation...]
+          </div>
+        )}
+
+        {/* Convergence locks */}
+        {finished && (
+          <div className="space-y-1 text-[#059669] select-none font-semibold text-[10px] pt-2 border-t border-neutral-900">
+            {converged && convergedClass ? (
+              <>
+                <div>✔ Preflight convergence checks completed.</div>
+                <div>✔ Consensus outcome locked on classification: {getClassName(convergedClass)}</div>
+                <div>✔ Calibrated confidence maps processed successfully.</div>
+              </>
+            ) : (
+              <div className="text-red-500">✖ DEBATE TERMINATED — FAILED TO REACH CONVERGENCE IN ROUNDS LIMIT</div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

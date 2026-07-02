@@ -84,7 +84,7 @@ export default function ArgumentStream({
     };
   }, [text, reduced]);
 
-  const caretColor = agentId ? AGENTS[agentId].color : "var(--accent-consensus)";
+  const caretColor = "#a3a3a3";
   const isTyping = active && visibleText.length < text.length;
 
   return (
