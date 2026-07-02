@@ -289,7 +289,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-r" style={{ borderColor: "#2d313c" }}>
           {/* Top: 2x2 Grid */}
           <section className="flex-1 min-h-0 p-1 grid grid-cols-2 grid-rows-2 gap-1 select-none bg-black">
-            
+
             {/* Quadrant 1: Localizer Specimen */}
             <div
               onClick={() => setSelectedViewport(1)}
@@ -453,7 +453,7 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
 
           {/* Sidebar Contents */}
           <div className="flex-1 overflow-y-auto p-4 space-y-5 scroll-clinical bg-[#0b0c10]">
-            
+
             {/* Section 1: Specimen Input Gate */}
             <div className="bg-[#12151b] rounded border p-4 space-y-3" style={{ borderColor: "#1e222b" }}>
               <div className="flex items-center justify-between border-b pb-2" style={{ borderColor: "#1e222b" }}>
@@ -572,11 +572,10 @@ export default function DebatePage({ params }: DebatePageProps): React.JSX.Eleme
                   <span className="font-mono text-[10px] font-bold text-[#e5e7eb] tracking-wide">
                     3. DIVERGENCE TRIGGER ANALYSIS
                   </span>
-                  <span className={`font-mono text-[9px] border px-1.5 py-0.5 rounded font-bold ${
-                    ws.trigger.fired 
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/25" 
+                  <span className={`font-mono text-[9px] border px-1.5 py-0.5 rounded font-bold ${ws.trigger.fired
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/25"
                       : "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
-                  }`}>
+                    }`}>
                     {ws.trigger.fired ? "DEBATE TRIGGERED" : "FAST PATH"}
                   </span>
                 </div>

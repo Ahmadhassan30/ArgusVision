@@ -47,7 +47,7 @@ export default function DebateTranscript({
 }: DebateTranscriptProps): React.JSX.Element {
   const scrollRefA = useRef<HTMLDivElement | null>(null);
   const scrollRefB = useRef<HTMLDivElement | null>(null);
-  
+
   const turnsA = turns.filter((t) => t.agent === "A");
   const turnsB = turns.filter((t) => t.agent === "B");
   const lastIndex = turns.length - 1;
@@ -96,7 +96,7 @@ export default function DebateTranscript({
 
       {/* Side-by-Side Dual Column Panels */}
       <div className="flex-1 flex min-h-0 divide-x divide-[#1a1a1f]">
-        
+
         {/* LEFT COLUMN: Agent A (CNN) */}
         <div
           ref={scrollRefA}
@@ -105,7 +105,7 @@ export default function DebateTranscript({
           {/* Sticky Header with ASCII Art */}
           <div className="sticky top-0 bg-[#0a0a0c] pb-3 pt-1 flex flex-col items-center gap-2 select-none border-b border-[#141417] z-10">
             <pre className="text-sky-400 font-mono font-bold leading-[1.1] text-center select-none text-[10px] tracking-tight">
-{`  ___ _  _ _  _ 
+              {`  ___ _  _ _  _ 
  / __| \\| | \\| |
 | (__| .\` | .\` |
  \\___|_|\\_|_|\\_|`}
@@ -117,7 +117,7 @@ export default function DebateTranscript({
               <span className="font-mono text-[9px] text-[#4b5563]">CNN STRUCTURAL EXTRACTOR</span>
             </div>
           </div>
-          
+
           {turnsA.length === 0 ? (
             <div className="h-28 flex flex-col items-center justify-center font-mono text-[10px] text-neutral-600 gap-1 select-none">
               <span>Awaiting agent-a readout...</span>
@@ -166,7 +166,7 @@ export default function DebateTranscript({
           {/* Sticky Header with ASCII Art */}
           <div className="sticky top-0 bg-[#0a0a0c] pb-3 pt-1 flex flex-col items-center gap-2 select-none border-b border-[#141417] z-10">
             <pre className="text-purple-400 font-mono font-bold leading-[1.1] text-center select-none text-[10px] tracking-tight">
-{`__   _____ _____ 
+              {`__   _____ _____ 
 \\ \\ / /_ _|_   _|
  \\ V / | |  | |  
   \\_/ |___| |_|  `}
