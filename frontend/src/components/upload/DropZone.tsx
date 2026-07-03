@@ -107,14 +107,14 @@ export default function DropZone({ onFileSelected }: DropZoneProps): React.JSX.E
           </div>
 
           <h3 className="text-white text-[16px] font-semibold tracking-wide">
-            {isDragActive ? "Release image here" : "Drag & Drop"}
+            {isDragActive ? "Release specimen scan" : "Drop Lesion Scan"}
           </h3>
           <p className="text-white/40 text-[12px] mt-1 font-sans">
-            or <span className="text-[#3b82f6] hover:underline underline-offset-2">choose a file</span>
+            or <span className="text-[#3b82f6] hover:underline underline-offset-2">locate scan file</span>
           </p>
 
           <p className="text-white/20 text-[10px] mt-6 tracking-wide font-sans">
-            Maximum file size 10MB
+            Dermoscopic RGB Modality · Max 10MB
           </p>
         </div>
       </div>
