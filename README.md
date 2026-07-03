@@ -26,13 +26,11 @@
 
 <br>
 
-## 🎬 Live Demo
+## Live Demo
 
 <div align="center">
 
-https://github.com/user-attachments/assets/video.mp4
-
-<video src="frontend/public/video.mp4" autoplay loop muted playsinline width="100%"></video>
+<img src="frontend/public/video.gif" alt="Argus Vision — Full inference pipeline demo" width="100%">
 
 <sub>Full inference pipeline — from lesion upload through dual-agent classification, spatial attention heatmaps, adversarial debate, to calibrated consensus verdict.</sub>
 
@@ -42,19 +40,19 @@ https://github.com/user-attachments/assets/video.mp4
 
 ---
 
-## ✨ Highlights
+## Highlights
 
 <table>
 <tr>
 <td width="50%">
 
-### 🧠 Dual-Agent Architecture
+### Dual-Agent Architecture
 Two state-of-the-art vision backbones evaluate every lesion independently — **EfficientNet-B4** (CNN) and **ViT-B/16** (Transformer) — trained on the ISIC 2019 dataset across 8 diagnostic categories.
 
 </td>
 <td width="50%">
 
-### ⚡ Intelligent Debate Trigger
+### Intelligent Debate Trigger
 Monitors **Jensen-Shannon divergence** and **Shannon entropy** in real-time. When agents disagree beyond threshold ($D_{JS} > 0.25$ or $H > 0.8$ bits), spatial attention analysis fires automatically.
 
 </td>
@@ -62,13 +60,13 @@ Monitors **Jensen-Shannon divergence** and **Shannon entropy** in real-time. Whe
 <tr>
 <td>
 
-### 🔬 Spatial Evidence Mapping
+### Spatial Evidence Mapping
 **Grad-CAM++** (CNN) and **Attention Rollout** (ViT) generate saliency heatmaps. A disagreement map highlights exactly where the two agents conflict spatially, with bounding-box localization.
 
 </td>
 <td>
 
-### 🎯 Calibrated Consensus
+### Calibrated Consensus
 A **23-dimensional numerical feature vector** feeds into a LightGBM fusion head trained with 5-Fold Stratified CV and Isotonic calibration — delivering temperature-scaled, ECE-reported verdicts.
 
 </td>
@@ -76,13 +74,13 @@ A **23-dimensional numerical feature vector** feeds into a LightGBM fusion head 
 <tr>
 <td>
 
-### 🏥 Clinical-Grade Interface
+### Clinical-Grade Interface
 DICOM workstation-inspired UI with real-time WebSocket streaming, 4-quadrant image viewer, live probability bars, and a diagnostic report sidebar that reads like hospital-grade equipment.
 
 </td>
 <td>
 
-### 🐳 One-Command Deployment
+### One-Command Deployment
 Fully containerized with Docker Compose — Next.js frontend, FastAPI backend, Redis job queue, and Nginx reverse proxy. From `git clone` to live in one command.
 
 </td>
@@ -91,7 +89,7 @@ Fully containerized with Docker Compose — Next.js frontend, FastAPI backend, R
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TD
@@ -118,7 +116,7 @@ graph TD
 
 ---
 
-## 🧬 The 23-Dimensional Consensus Contract
+## The 23-Dimensional Consensus Contract
 
 The calibrated fusion head consumes a fixed-width numerical feature vector — no text, no embeddings, no LLM calls:
 
@@ -138,7 +136,7 @@ The calibrated fusion head consumes a fixed-width numerical feature vector — n
 
 ---
 
-## 🗂️ ISIC Diagnostic Categories
+## ISIC Diagnostic Categories
 
 The pipeline classifies into the **8 canonical ISIC 2019 categories**:
 
@@ -155,7 +153,7 @@ The pipeline classifies into the **8 canonical ISIC 2019 categories**:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -176,7 +174,7 @@ Open **`http://localhost`** in your browser. That's it.
 
 ---
 
-## 🧪 Training Pipeline
+## Training Pipeline
 
 All models are trainable on a **free Kaggle GPU** using the provided notebooks:
 
@@ -202,7 +200,7 @@ docker compose up --build
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```
 argus-vision/
@@ -242,7 +240,7 @@ argus-vision/
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Backend Environment
 
@@ -264,13 +262,13 @@ argus-vision/
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### REST
 
 | Endpoint | Method | Description |
 |:---------|:-------|:------------|
-| `/api/classify` | `POST` | Upload dermoscopic image → returns `job_id` |
+| `/api/classify` | `POST` | Upload dermoscopic image, returns `job_id` |
 | `/api/jobs/{job_id}` | `GET` | Retrieve full job result with predictions |
 | `/api/health` | `GET` | Health check and model loading status |
 
@@ -288,13 +286,13 @@ Connect to `ws://localhost/ws/debate/{job_id}` to receive real-time pipeline eve
 
 ---
 
-## 🛡️ Disclaimer
+## Disclaimer
 
 > **This is a research prototype.** Argus Vision is designed for academic and research exploration of multi-agent consensus architectures in medical imaging. It is **not** a certified medical device and must **not** be used for clinical diagnostic decisions. Always consult qualified healthcare professionals for medical diagnoses.
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
@@ -306,7 +304,7 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE) fo
 
   <br>
 
-  <sub>Built with ❤️ by <b>Ahmad Hassan</b></sub>
+  <sub>Built by <b>Ahmad Hassan</b></sub>
 
   <br>
 
