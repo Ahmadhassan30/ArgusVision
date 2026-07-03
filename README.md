@@ -2,7 +2,6 @@
 
   <img src="frontend/public/logo.png" alt="Argus Vision" width="280">
 
-  # Argus Vision
 
   **Adversarial multi-agent visual debate for uncertainty-aware dermoscopic image classification**
 
