@@ -151,25 +151,46 @@ export default function HomePage(): React.JSX.Element {
           </div>
         </section>
 
-        {/* Capabilities */}
-        <section className="grid gap-6 border-t border-hairline/50 pt-10 sm:grid-cols-3">
-          {CAPABILITIES.map((cap, i) => (
-            <div
-              key={cap.title}
-              className="group animate-panel-enter rounded-2xl border border-hairline bg-surface/50 p-6 shadow-panel backdrop-blur-md hover:border-agent-a/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)] transition-all duration-300"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="font-mono text-[11px] uppercase tracking-wider text-agent-a/80">
-                NODE_0{i + 1}
-              </div>
-              <h3 className="mt-2 font-display text-xl font-bold uppercase tracking-tight text-white group-hover:text-agent-a transition-colors">{cap.title}</h3>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-ink-soft/80 font-body">{cap.body}</p>
-            </div>
-          ))}
-        </section>
+        <footer className="mt-8 border-t border-hairline/40 pt-10 pb-6 relative overflow-hidden">
+          {/* Watermark brand name */}
+          <div
+            className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/4 select-none whitespace-nowrap font-display font-black uppercase tracking-tighter text-white/[0.03]"
+            style={{ fontSize: "clamp(80px, 14vw, 180px)" }}
+            aria-hidden
+          >
+            Argus Vision
+          </div>
 
-        <footer className="py-8 text-center font-mono text-[10px] uppercase tracking-widest text-ink-faint/70">
-          SECURE PROTOCOL — RESEARCH FIXTURE ONLY
+          {/* Footer content */}
+          <div className="relative z-10 flex flex-col items-center gap-6">
+            {/* Brand row */}
+            <div className="flex flex-col items-center gap-2 text-center">
+              <span className="font-display text-2xl font-bold uppercase tracking-[0.12em] text-white/90">
+                Argus Vision
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-indigo-300/50">
+                Autonomous Neural Debate Protocol
+              </span>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px w-24 bg-hairline/60" />
+
+            {/* Credit */}
+            <div className="flex flex-col items-center gap-1 text-center">
+              <span className="font-sans text-[12px] text-ink-soft/70">
+                Researched &amp; developed by
+              </span>
+              <span className="font-display text-[15px] font-semibold tracking-wide text-white/80">
+                Ahmad Hassan
+              </span>
+            </div>
+
+            {/* Copyright */}
+            <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-ink-faint/40 mt-2">
+              © {new Date().getFullYear()} Argus Vision — Research Prototype
+            </p>
+          </div>
         </footer>
       </div>
     </main>
