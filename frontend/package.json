@@ -17,6 +17,10 @@
     "react-dropzone": "14.2.3",
     "three": "^0.185.0"
   },
+  "optionalDependencies": {
+    "@next/swc-linux-x64-gnu": "14.2.3",
+    "@next/swc-linux-x64-musl": "14.2.3"
+  },
   "devDependencies": {
     "@types/node": "20.14.0",
     "@types/react": "18.3.3",
