@@ -1,116 +1,60 @@
 "use client";
 
 /**
- * DropZone provides a drag-and-drop / click-to-select area for a single
- * dermoscopic image (JPEG or PNG, up to 10 MB). On a valid drop it reads the
- * image dimensions, surfaces the file size and resolution, and notifies the
- * parent via `onFileSelected`. Rejected files (wrong type or too large) render
- * an inline error message. The border pulses between the Agent A and Agent B
- * colors while a drag is active.
+ * DropZone — clean, sophisticated file upload zone.
+ * Drag-and-drop or click to browse. Accepts JPEG / PNG ≤ 10 MB.
  */
 
 import { useCallback, useState } from "react";
 import { useDropzone, type FileRejection } from "react-dropzone";
 import clsx from "clsx";
 
-/** The maximum accepted image size in bytes (10 MB). */
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
 
-/** Props for {@link DropZone}. */
 export interface DropZoneProps {
-  /** Invoked with the accepted image file once a valid file is provided. */
   onFileSelected: (file: File) => void;
 }
 
-/** The pixel dimensions of a read image. */
 interface ImageDimensions {
   width: number;
   height: number;
 }
 
-/**
- * Formats a byte count into a human-readable KB/MB string.
- *
- * @param bytes - The size in bytes.
- * @returns A formatted size string (e.g. "842.0 KB" or "3.21 MB").
- */
 function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-/**
- * Translates the first react-dropzone rejection into a user-facing message.
- *
- * @param rejections - The rejected files reported by react-dropzone.
- * @returns A human-readable error message, or `null` when none apply.
- */
 function rejectionMessage(rejections: FileRejection[]): string | null {
-  if (rejections.length === 0) {
-    return null;
-  }
-  const first = rejections[0];
-  const error = first.errors[0];
-  if (!error) {
-    return "This file could not be accepted.";
-  }
+  if (rejections.length === 0) return null;
+  const error = rejections[0]?.errors[0];
+  if (!error) return "This file could not be accepted.";
   switch (error.code) {
-    case "file-too-large":
-      return "File is too large. Maximum size is 10 MB.";
-    case "file-invalid-type":
-      return "Unsupported file type. Upload a JPG or PNG image.";
-    case "too-many-files":
-      return "Only a single image can be uploaded at a time.";
-    default:
-      return error.message;
+    case "file-too-large":   return "File exceeds 10 MB limit.";
+    case "file-invalid-type": return "Only JPG or PNG images are accepted.";
+    case "too-many-files":   return "Please upload one image at a time.";
+    default:                 return error.message;
   }
 }
 
-/**
- * A single-file image dropzone with validation and dimension readout.
- *
- * @param props - The `onFileSelected` callback.
- * @returns The rendered dropzone element.
- */
-export default function DropZone({
-  onFileSelected,
-}: DropZoneProps): React.JSX.Element {
+export default function DropZone({ onFileSelected }: DropZoneProps): React.JSX.Element {
   const [acceptedFile, setAcceptedFile] = useState<File | null>(null);
   const [dimensions, setDimensions] = useState<ImageDimensions | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const onDrop = useCallback(
     (accepted: File[], rejections: FileRejection[]): void => {
-      const message = rejectionMessage(rejections);
-      if (message) {
-        setError(message);
-        setAcceptedFile(null);
-        setDimensions(null);
-        return;
-      }
-
+      const msg = rejectionMessage(rejections);
+      if (msg) { setError(msg); setAcceptedFile(null); setDimensions(null); return; }
       const file = accepted[0];
-      if (!file) {
-        return;
-      }
-
+      if (!file) return;
       setError(null);
       setAcceptedFile(file);
-
-      const objectUrl = URL.createObjectURL(file);
+      const url = URL.createObjectURL(file);
       const img = new Image();
-      img.onload = (): void => {
-        setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-        URL.revokeObjectURL(objectUrl);
-      };
-      img.onerror = (): void => {
-        setDimensions(null);
-        URL.revokeObjectURL(objectUrl);
-      };
-      img.src = objectUrl;
-
+      img.onload = () => { setDimensions({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(url); };
+      img.onerror = () => { setDimensions(null); URL.revokeObjectURL(url); };
+      img.src = url;
       onFileSelected(file);
     },
     [onFileSelected]
@@ -118,60 +62,106 @@ export default function DropZone({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "image/jpeg": [".jpg", ".jpeg"],
-      "image/png": [".png"],
-    },
+    accept: { "image/jpeg": [".jpg", ".jpeg"], "image/png": [".png"] },
     maxFiles: 1,
     maxSize: MAX_SIZE_BYTES,
     multiple: false,
   });
 
   return (
-    <div className="flex w-full flex-col gap-3">
-      {/* Drag-active state lifts the border to the Agent A accent with a soft
-          glow and a subtle scale — pure CSS, no animation library. */}
+    <div className="flex w-full flex-col items-center gap-4">
       <div
         {...getRootProps()}
         className={clsx(
-          "flex cursor-pointer flex-col items-center justify-center gap-2",
-          "rounded-2xl border-2 border-dashed bg-surface/30 backdrop-blur-md px-6 py-14 text-center",
-          "transition duration-300 ease-out will-change-transform",
+          "relative w-full cursor-pointer overflow-hidden rounded-2xl",
+          "border border-white/[0.07] bg-white/[0.02]",
+          "transition-all duration-500 ease-out",
           isDragActive
-            ? "scale-[1.02] border-agent-a shadow-[0_0_30px_rgba(59,130,246,0.3)] bg-surface/50"
-            : "border-hairline hover:border-agent-a hover:bg-surface/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]"
+            ? "border-indigo-400/50 shadow-[0_0_40px_rgba(99,102,241,0.18)] bg-indigo-500/[0.04] scale-[1.01]"
+            : "hover:border-white/[0.14] hover:bg-white/[0.035] hover:shadow-[0_0_30px_rgba(255,255,255,0.04)]"
         )}
       >
         <input {...getInputProps()} />
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface/30 text-agent-a group-hover:text-white transition-colors">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
+
+        {/* Subtle dot-grid background */}
+        <div
+          className="absolute inset-0 opacity-30 pointer-events-none"
+          style={{
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+
+        {/* Radial fade overlay — darkens edges */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.55)_100%)] pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center gap-5 px-10 py-16">
+
+          {/* Upload icon with animated ring on drag */}
+          <div className={clsx(
+            "relative flex h-16 w-16 items-center justify-center rounded-full",
+            "border border-white/10 bg-white/[0.04]",
+            "transition-all duration-300",
+            isDragActive && "border-indigo-400/40 bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.25)]"
+          )}>
+            {/* Spinning ring on drag */}
+            {isDragActive && (
+              <div className="absolute inset-0 rounded-full border border-indigo-400/30 animate-spin" style={{ animationDuration: "3s" }} />
+            )}
+            <svg
+              className={clsx("h-7 w-7 transition-colors duration-300", isDragActive ? "text-indigo-300" : "text-white/40")}
+              fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+          </div>
+
+          {/* Text */}
+          <div className="flex flex-col items-center gap-2 text-center">
+            <p className={clsx(
+              "text-[15px] font-semibold tracking-tight transition-colors duration-300",
+              isDragActive ? "text-indigo-200" : "text-white/80"
+            )}>
+              {isDragActive ? "Release to upload" : "Drop your image here"}
+            </p>
+            <p className="text-[13px] text-white/30">
+              or <span className="text-white/55 underline underline-offset-2 decoration-white/20">click to browse</span>
+            </p>
+          </div>
+
+          {/* Specs row */}
+          <div className="flex items-center gap-3 mt-1">
+            {["JPG / PNG", "Max 10 MB", "Dermoscopic"].map((tag, i) => (
+              <span
+                key={i}
+                className="rounded-md border border-white/[0.07] bg-white/[0.03] px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-white/25"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
         </div>
-        <p className="font-mono text-[13px] font-semibold uppercase tracking-widest text-white mt-2">
-          {isDragActive
-            ? "» RELEASE_DATA_INPUT «"
-            : "» UPLOAD_IMAGE_DATA «"}
-        </p>
-        <p className="font-mono text-[10px] uppercase tracking-widest text-agent-a">
-          FORMAT: JPG_PNG // MAX: 10MB // INTERFACE: CLICK_TO_BROWSE
-        </p>
       </div>
 
+      {/* Error */}
       {error && (
-        <p className="font-mono text-xs text-danger" role="alert">
+        <p className="text-[12px] text-red-400/80 font-mono tracking-wide" role="alert">
           {error}
         </p>
       )}
 
+      {/* Accepted file meta */}
       {acceptedFile && !error && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-ink-faint">
-          <span className="truncate text-ink-soft">{acceptedFile.name}</span>
-          <span>{formatBytes(acceptedFile.size)}</span>
+        <div className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.03] px-4 py-2.5">
+          <svg className="h-3.5 w-3.5 text-emerald-400/70 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          <span className="font-mono text-[11px] text-white/40 truncate max-w-[180px]">{acceptedFile.name}</span>
+          <span className="font-mono text-[11px] text-white/25">{formatBytes(acceptedFile.size)}</span>
           {dimensions && (
-            <span>
-              {dimensions.width}&times;{dimensions.height}
-            </span>
+            <span className="font-mono text-[11px] text-white/25">{dimensions.width}×{dimensions.height}</span>
           )}
         </div>
       )}

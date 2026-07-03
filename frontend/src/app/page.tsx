@@ -103,7 +103,7 @@ export default function HomePage(): React.JSX.Element {
           </p>
 
           {/* Upload */}
-          <div className="mt-12 w-full max-w-md">
+          <div className="mt-12 w-full max-w-lg">
             {file !== null && previewUrl !== null ? (
               <div className="flex flex-col items-center gap-6">
                 <ImagePreview src={previewUrl} fileName={file.name} onClear={handleClear} />
