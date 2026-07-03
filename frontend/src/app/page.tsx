@@ -108,10 +108,10 @@ export default function HomePage(): React.JSX.Element {
             <div className="flex items-start justify-between mb-5">
               <div>
                 <h3 className="text-[17px] font-semibold text-white tracking-wide">
-                  Upload the specimen
+                  Ingest Lesion Specimen
                 </h3>
                 <p className="text-[11px] text-[#52566b] mt-0.5 font-sans leading-relaxed">
-                  Make sure the file format meets requirements. It must be .jpg, .jpeg, or .png.
+                  Verify input modality. Format must comply with RGB dermoscopy standards (.jpg, .jpeg, or .png).
                 </p>
               </div>
               <button
