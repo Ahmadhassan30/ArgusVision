@@ -94,9 +94,9 @@ export default function DropZone({ onFileSelected }: DropZoneProps): React.JSX.E
               <rect x="18" y="42" width="34" height="3" rx="1.5" fill="white" opacity="0.08" />
               <rect x="18" y="50" width="28" height="3" rx="1.5" fill="white" opacity="0.08" />
 
-              {/* Capsule Badge (like .PDF in reference, here labeled .IMG) */}
+              {/* Capsule Badge (like .PDF in reference, here labeled .DCM) */}
               <rect x="16" y="58" width="34" height="13" rx="6.5" fill="url(#badgeGradient)" stroke="rgba(255,255,255,0.1)" strokeWidth="0.75" />
-              <text x="33" y="67.5" fill="white" fontFamily="system-ui, sans-serif" fontSize="7.5" fontWeight="800" textAnchor="middle" letterSpacing="0.5">.IMG</text>
+              <text x="33" y="67.5" fill="white" fontFamily="system-ui, sans-serif" fontSize="7.5" fontWeight="800" textAnchor="middle" letterSpacing="0.5">.DCM</text>
 
               {/* Circular Upload Badge Overlay */}
               <g filter="url(#badgeShadow)">
