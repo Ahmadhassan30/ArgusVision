@@ -28,9 +28,20 @@ def _check_model(name: str) -> None:
         freeze_backbone_bn,
         snapshot_frozen_params,
         LogitAdjustedLoss,
+        assert_single_stage_b_rebalancing,
+    )
+    from config import (
+        USE_WEIGHTED_SAMPLER_STAGE_B,
+        USE_CLASS_WEIGHTED_LOSS_STAGE_B,
+        ALLOW_LEGACY_STAGE_B_DOUBLE_REBALANCING,
     )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    assert_single_stage_b_rebalancing(
+        USE_WEIGHTED_SAMPLER_STAGE_B,
+        USE_CLASS_WEIGHTED_LOSS_STAGE_B,
+        ALLOW_LEGACY_STAGE_B_DOUBLE_REBALANCING,
+    )
     model = timm.create_model(name, pretrained=False, num_classes=8).to(device)
 
     # --- Stage B freeze (params + BN running stats) ---

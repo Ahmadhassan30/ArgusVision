@@ -29,6 +29,34 @@ import torch.nn as nn
 
 
 # --------------------------------------------------------------------------- #
+# Publication-rescue imbalance policy
+# --------------------------------------------------------------------------- #
+def assert_single_stage_b_rebalancing(
+    use_weighted_sampler: bool,
+    use_class_weighted_loss: bool,
+    allow_legacy_double_rebalancing: bool = False,
+) -> None:
+    """Require one explicit Stage-B rebalancing method for publication runs.
+
+    Stage B should use class-balanced sampling OR class-weighted focal loss, not
+    both, unless the caller intentionally changes this policy outside the
+    publication-rescue configuration.
+    """
+    if (
+        use_weighted_sampler
+        and use_class_weighted_loss
+        and not allow_legacy_double_rebalancing
+    ):
+        raise ValueError(
+            "Invalid publication Stage-B imbalance configuration: "
+            "USE_WEIGHTED_SAMPLER_STAGE_B and USE_CLASS_WEIGHTED_LOSS_STAGE_B "
+            "are both True. Use one explicit rebalancing method, or opt into "
+            "the legacy double-rebalanced behavior with "
+            "ALLOW_LEGACY_STAGE_B_DOUBLE_REBALANCING outside the publication run."
+        )
+
+
+# --------------------------------------------------------------------------- #
 # Logit adjustment (Menon et al., 2021)
 # --------------------------------------------------------------------------- #
 def class_priors_from_counts(class_counts: Sequence[float]) -> list[float]:

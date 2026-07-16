@@ -33,10 +33,14 @@ from __future__ import annotations
 
 import os
 import random
+from collections import Counter
 from typing import Optional, Sequence
 
 DEFAULT_TEST_SIZE: float = 0.15
 DEFAULT_SEED: int = 42
+PUBLICATION_FINAL_TEST_SIZE_FROM_OLD_TRAIN: float = 0.117647
+PUBLICATION_MODEL_VAL_SIZE_FROM_DEVELOPMENT: float = 0.133333
+MIN_PUBLICATION_LESION_COVERAGE_PCT: float = 95.0
 
 # Common column names seen across the notebooks / metadata files.
 _IMAGE_COL_CANDIDATES = ("image", "image_id", "image_name", "img", "isic_id", "name")
@@ -364,6 +368,208 @@ def get_lesion_grouped_split(
     train_df["lesion_group"] = [keys[i] for i in train_idx]
     val_df["lesion_group"] = [keys[i] for i in val_idx]
     return train_df, val_df
+
+
+def get_publication_splits(
+    df,
+    label_col: str,
+    image_col: Optional[str] = None,
+    lesion_id_col: str = "lesion_id",
+    verbose: bool = True,
+):
+    """Return publication-safe train/model-val/risk-dev/final-test splits.
+
+    The old seed-42 15% held-out partition is reconstructed first and permanently
+    assigned to ``risk_dev``. The new locked final test is drawn only from the old
+    train pool with seed 7. The remaining development pool is split with seed 29
+    into model-training and model-validation rows. Every split is lesion-grouped,
+    image-disjoint, and carries both ``lesion_group`` and ``research_split``.
+
+    This function intentionally fails when lesion metadata coverage is below 95%.
+    Publication splits must never silently degrade to image-level grouping.
+    """
+    if image_col is None:
+        image_col = _detect_col(df, _IMAGE_COL_CANDIDATES)
+    if image_col is None:
+        raise ValueError(
+            "Could not detect an image-id column; pass image_col explicitly. "
+            f"Looked for {_IMAGE_COL_CANDIDATES}."
+        )
+    for required in (label_col, image_col, lesion_id_col):
+        if required not in df.columns:
+            raise ValueError(f"Required column {required!r} is missing from dataframe.")
+
+    ordered = _prepare_publication_dataframe(df, label_col, image_col, lesion_id_col)
+    coverage = _lesion_coverage_pct(ordered[lesion_id_col])
+    if coverage < MIN_PUBLICATION_LESION_COVERAGE_PCT:
+        raise ValueError(
+            "Publication split refused: lesion metadata coverage is "
+            f"{coverage:.2f}%, below required {MIN_PUBLICATION_LESION_COVERAGE_PCT:.1f}%. "
+            "Attach verified lesion metadata before locking publication splits."
+        )
+
+    if verbose:
+        print("── Publication-safe split protocol ──────────────────────────────")
+        print(f"  deterministic order : normalized {image_col!r}, sorted ascending")
+        print(
+            f"  lesion_id coverage  : {coverage:.2f}% "
+            f"({sum(_is_present(v) for v in ordered[lesion_id_col])}/{len(ordered)})"
+        )
+        print("  step 1              : old seed-42 15% partition -> risk_dev")
+
+    old_train_pool, risk_dev = get_lesion_grouped_split(
+        ordered,
+        label_col=label_col,
+        lesion_id_col=lesion_id_col,
+        image_col=image_col,
+        test_size=DEFAULT_TEST_SIZE,
+        random_state=DEFAULT_SEED,
+        verbose=verbose,
+    )
+
+    if verbose:
+        print("  step 2              : seed-7 final_test drawn only from old_train_pool")
+    development_pool, final_test = get_lesion_grouped_split(
+        old_train_pool,
+        label_col=label_col,
+        lesion_id_col=lesion_id_col,
+        image_col=image_col,
+        test_size=PUBLICATION_FINAL_TEST_SIZE_FROM_OLD_TRAIN,
+        random_state=7,
+        verbose=verbose,
+    )
+
+    if verbose:
+        print("  step 3              : seed-29 model_val drawn from development_pool")
+    train_df, model_val = get_lesion_grouped_split(
+        development_pool,
+        label_col=label_col,
+        lesion_id_col=lesion_id_col,
+        image_col=image_col,
+        test_size=PUBLICATION_MODEL_VAL_SIZE_FROM_DEVELOPMENT,
+        random_state=29,
+        verbose=verbose,
+    )
+
+    split_map = {
+        "train": train_df,
+        "model_val": model_val,
+        "risk_dev": risk_dev,
+        "final_test": final_test,
+    }
+    for name, frame in split_map.items():
+        frame["research_split"] = name
+
+    _assert_publication_invariants(
+        ordered,
+        split_map,
+        image_col=image_col,
+        label_col=label_col,
+        lesion_id_col=lesion_id_col,
+    )
+
+    if verbose:
+        _print_publication_summary(split_map, label_col)
+
+    clean = []
+    for name in ("train", "model_val", "risk_dev", "final_test"):
+        frame = split_map[name].copy().reset_index(drop=True)
+        if "_publication_row_id" in frame.columns:
+            frame = frame.drop(columns=["_publication_row_id"])
+        clean.append(frame)
+    return tuple(clean)
+
+
+def _prepare_publication_dataframe(df, label_col: str, image_col: str, lesion_id_col: str):
+    """Normalize, validate duplicate labels, sort, and reset for publication splits."""
+    ordered = df.copy()
+    ordered["_normalized_image_id"] = ordered[image_col].map(_norm_image_id)
+    if ordered["_normalized_image_id"].duplicated().any():
+        conflicts = []
+        for image_id, group in ordered.groupby("_normalized_image_id", sort=True):
+            if group[label_col].nunique(dropna=False) > 1:
+                conflicts.append(str(image_id))
+        if conflicts:
+            raise ValueError(
+                "Conflicting labels for duplicate normalized image ids: "
+                f"{conflicts[:10]} (total={len(conflicts)})"
+            )
+    ordered = ordered.sort_values("_normalized_image_id", kind="mergesort").reset_index(drop=True)
+    ordered["_publication_row_id"] = list(range(len(ordered)))
+    return ordered
+
+
+def _lesion_coverage_pct(lesion_ids: Sequence) -> float:
+    total = len(lesion_ids)
+    if total == 0:
+        return 0.0
+    present = sum(1 for value in lesion_ids if _is_present(value))
+    return 100.0 * present / total
+
+
+def _assert_publication_invariants(
+    original,
+    split_map: dict,
+    image_col: str,
+    label_col: str,
+    lesion_id_col: str,
+) -> None:
+    names = list(split_map)
+    for i, left_name in enumerate(names):
+        for right_name in names[i + 1 :]:
+            left = split_map[left_name]
+            right = split_map[right_name]
+            assert_no_lesion_leakage(left, right, lesion_id_col=lesion_id_col)
+            left_images = set(left["_normalized_image_id"])
+            right_images = set(right["_normalized_image_id"])
+            overlap = left_images & right_images
+            assert not overlap, (
+                f"Image overlap between {left_name} and {right_name}: "
+                f"{len(overlap)} e.g. {sorted(overlap)[:5]}"
+            )
+
+    risk_images = set(split_map["risk_dev"]["_normalized_image_id"])
+    final_images = set(split_map["final_test"]["_normalized_image_id"])
+    assert not (risk_images & final_images), "final_test overlaps old seed-42 risk_dev."
+
+    assigned_ids = []
+    for frame in split_map.values():
+        assigned_ids.extend(frame["_publication_row_id"].tolist())
+    expected_ids = original["_publication_row_id"].tolist()
+    assert Counter(assigned_ids) == Counter(expected_ids), (
+        "Publication split assignment mismatch: rows were lost, duplicated, or altered."
+    )
+
+    original_label_counts = Counter(original[label_col].tolist())
+    assigned_label_counts = Counter()
+    for frame in split_map.values():
+        assigned_label_counts.update(frame[label_col].tolist())
+    assert assigned_label_counts == original_label_counts, (
+        "Publication split label reconstruction mismatch."
+    )
+
+
+def _print_publication_summary(split_map: dict, label_col: str) -> None:
+    total = sum(len(frame) for frame in split_map.values())
+    labels = sorted(
+        {label for frame in split_map.values() for label in frame[label_col].tolist()},
+        key=lambda value: str(value),
+    )
+    print("── Publication split summary ───────────────────────────────────")
+    print(f"  total rows assigned : {total}")
+    for name, frame in split_map.items():
+        pct = (100.0 * len(frame) / total) if total else 0.0
+        print(f"  {name:10s}: {len(frame):6d} rows ({pct:6.2f}%)")
+        counts = Counter(frame[label_col].tolist())
+        missing = [label for label in labels if counts.get(label, 0) == 0]
+        if missing:
+            print(
+                f"  WARNING: {name} is missing class(es): "
+                + ", ".join(str(label) for label in missing)
+            )
+        for label in labels:
+            print(f"      class {label!s:>6}: {counts.get(label, 0):6d}")
+    print("─────────────────────────────────────────────────────────────────")
 
 
 def assert_no_lesion_leakage(

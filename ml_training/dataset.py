@@ -257,9 +257,8 @@ class ISICDataset(Dataset):
 
         Delegates to :func:`weighting.effective_number_weights` — the single source
         of truth shared with notebooks 01/02 — using ``config.EFFECTIVE_NUMBER_BETA``.
-        Replaces the former ``1 / sqrt(count)`` weighting. The SAME weighting is used
-        by :meth:`make_weighted_sampler`, so the sampler and the FocalLoss ``alpha``
-        can never drift apart. Suitable as the ``alpha`` of :class:`losses.FocalLoss`.
+        Replaces the former ``1 / sqrt(count)`` weighting. For publication-rescue
+        training, use these weights for sampling OR FocalLoss ``alpha``, not both.
 
         Returns:
             A ``torch.FloatTensor`` of shape ``(NUM_CLASSES,)``.
@@ -271,9 +270,8 @@ class ISICDataset(Dataset):
     def make_weighted_sampler(self) -> WeightedRandomSampler:
         """Create a :class:`WeightedRandomSampler` for class-balanced sampling.
 
-        Each sample's weight is its class's effective-number weight (the SAME array
-        returned by :meth:`compute_class_weights`), so the sampler and the loss use
-        one consistent weighting.
+        Each sample's weight is its class's effective-number weight. Publication
+        training pairs this sampler with ``FocalLoss(alpha=None)`` by default.
 
         Returns:
             A ``WeightedRandomSampler`` with ``num_samples == len(self)`` and

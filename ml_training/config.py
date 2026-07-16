@@ -35,9 +35,9 @@ LABEL_SMOOTHING: float = 0.1
 
 # --- Class-imbalance weighting ----------------------------------------------
 # Effective-number-of-samples weighting (Cui et al., 2019): w_c = (1 - beta) /
-# (1 - beta**count_c), normalized to mean 1. The SAME array drives BOTH the
-# WeightedRandomSampler per-sample weights AND the FocalLoss alpha (so they cannot
-# drift apart), replacing the old 1/sqrt(count) weighting.
+# (1 - beta**count_c), normalized to mean 1. For the publication-rescue run,
+# Stage B uses ONE explicit rebalancing method by default: class-balanced
+# sampling. Class-weighted focal loss remains available only as a legacy toggle.
 #
 # CHOICE OF BETA — measured on a 100k-draw sampler simulation over the real ISIC-2019
 # counts (max:min = ratio of most- to least-sampled class; ideal 1.0):
@@ -53,6 +53,9 @@ LABEL_SMOOTHING: float = 0.1
 #                        — an overfitting + calibration risk we can't afford (ECE ~10.9%).
 # Effective-number only rebalances once 1/(1-beta) exceeds the MAJORITY count (~12,875).
 EFFECTIVE_NUMBER_BETA: float = 0.999
+USE_WEIGHTED_SAMPLER_STAGE_B: bool = True
+USE_CLASS_WEIGHTED_LOSS_STAGE_B: bool = False
+ALLOW_LEGACY_STAGE_B_DOUBLE_REBALANCING: bool = False
 
 # --- Training schedule ------------------------------------------------------
 MAX_EPOCHS_HEAD: int = 5
@@ -69,7 +72,7 @@ MAX_EPOCHS_FINETUNE: int = PHASE2_MAX_EPOCHS
 # "joint"     = single-stage class-balanced fine-tune (the Phase-3 path).
 # "decoupled" = Stage A (instance-balanced sampling, UNWEIGHTED loss, full network —
 #               learn good features) then Stage B (freeze backbone, class-balanced
-#               sampler + weighted focal loss, retrain ONLY the head — fix the boundary).
+#               sampler + unweighted focal loss by default, retrain ONLY the head — fix the boundary).
 # A/B the two on Kaggle; do not assume which wins.
 TRAINING_MODE: str = "decoupled"
 STAGE_A_EPOCHS: int = 30  # representation learning (early-stops via PHASE2_PATIENCE)

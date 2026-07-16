@@ -1,10 +1,10 @@
 """Class-imbalance weighting for Argus Vision — the single source of truth.
 
 Defines :func:`effective_number_weights` (Cui et al., 2019, "Class-Balanced Loss
-Based on Effective Number of Samples"). The SAME returned weight array is used for
-BOTH the ``WeightedRandomSampler`` per-sample weights and the ``FocalLoss`` ``alpha``,
-in notebooks 01/02 and in :mod:`dataset`, so the sampler and the loss can never drift
-apart. Replaces the previous 1/sqrt(count) weighting, which under-corrected the heavy
+Based on Effective Number of Samples"). The returned weight array can be used for
+the ``WeightedRandomSampler`` per-sample weights or the ``FocalLoss`` ``alpha``.
+Publication-rescue training uses the sampler path by default and keeps focal
+``alpha=None`` to avoid double rebalancing. Replaces the previous 1/sqrt(count) weighting, which under-corrected the heavy
 ISIC-8 imbalance (a 51:1 raw ratio was only softened to roughly 7:1 of sampling mass).
 
 Torch-free on purpose: it returns a NumPy array when NumPy is available (so the
