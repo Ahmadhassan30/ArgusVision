@@ -1,0 +1,53 @@
+{
+  "cohort_policy": "verified_lesion_only",
+  "excluded_missing_lesion_ids_sha256": "87084eaad28b4ab409fbafd771663e0c7a3d318b8a3df0d13af061a287905322",
+  "excluded_missing_lesion_rows": 2084,
+  "ground_truth_csv": "C:\\tmp\\argus-isic2019\\ISIC_2019_Training_GroundTruth.csv",
+  "ground_truth_csv_sha256": "aa88e9638fe4df9ef330dc4ba22fa4bd475c44af692fffb870c73091ab25cdcd",
+  "image_col": "image",
+  "image_dir": null,
+  "image_id_sha256": "de97b05cc0f10c0c0e9265e639cd083736c0486cf038d68b98992f8f53e7bb79",
+  "label_col": "label",
+  "label_counts": {
+    "0": 4185,
+    "1": 11326,
+    "2": 3323,
+    "3": 867,
+    "4": 2426,
+    "5": 239,
+    "6": 253,
+    "7": 628
+  },
+  "lesion_id_col": "lesion_id",
+  "lesion_id_coverage_pct": 100.0,
+  "lesion_id_missing": 0,
+  "lesion_id_present": 23247,
+  "metadata_csv": "C:\\tmp\\argus-isic2019\\ISIC_2019_Training_Metadata.csv",
+  "metadata_csv_sha256": "d93994a8ed201d474de9a7af7e17ec30929cbc4a5220659ecbde17cbe83e9316",
+  "missing_lesion_id_policy": "excluded",
+  "n_rows": 23247,
+  "n_unique_normalized_images": 23247,
+  "original_dataset_fingerprint": {
+    "image_id_sha256": "3e7ed5718c72f3720e34700f1928c3c0d485b957dfd7c4d46489c08a259f1bba",
+    "label_counts": {
+      "0": 4522,
+      "1": 12875,
+      "2": 3323,
+      "3": 867,
+      "4": 2624,
+      "5": 239,
+      "6": 253,
+      "7": 628
+    },
+    "lesion_id_coverage_pct": 91.77292645375232,
+    "lesion_id_missing": 2084,
+    "lesion_id_present": 23247,
+    "n_rows": 25331,
+    "n_unique_normalized_images": 25331
+  },
+  "original_total_rows": 25331,
+  "split_protocol": "publication_rescue_v1",
+  "verified_lesion_coverage_percent": 91.77292645375232,
+  "verified_lesion_only_cohort": true,
+  "verified_lesion_rows": 23247
+}

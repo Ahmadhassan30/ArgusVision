@@ -10,8 +10,14 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from create_locked_publication_splits import write_locked_split_artifacts
+from create_locked_publication_splits import (
+    EXCLUDED_MISSING_LESION_REASON,
+    build_verified_lesion_cohort,
+    dataframe_fingerprint,
+    write_locked_split_artifacts,
+)
 from splits import (
+    _prepare_publication_dataframe,
     get_lesion_grouped_split,
     get_publication_splits,
     _norm_image_id,
@@ -165,4 +171,118 @@ def test_manifest_hashes(tmp_path) -> None:
     fingerprint = json.loads((tmp_path / "dataset_fingerprint.json").read_text(encoding="utf-8"))
     assert hashes == manifest["hashes"]
     assert summary["csv_sha256"] == hashes
+    assert summary["verification"]["zero_image_overlap"] is True
+    assert summary["verification"]["zero_lesion_id_overlap"] is True
+    assert summary["verification"]["zero_lesion_group_overlap"] is True
+    assert all(
+        count == 0
+        for counts in (
+            summary["verification"]["pairwise_image_overlap_counts"],
+            summary["verification"]["pairwise_lesion_id_overlap_counts"],
+            summary["verification"]["pairwise_lesion_group_overlap_counts"],
+        )
+        for count in counts.values()
+    )
     assert fingerprint["split_protocol"] == "publication_rescue_v1"
+
+
+def test_verified_lesion_only_mode_passes_at_official_coverage() -> None:
+    total = 25_331
+    verified = 23_247
+    frame = pd.DataFrame(
+        {
+            "image": [f"ISIC_{index:07d}" for index in range(total)],
+            "label": [index % 8 for index in range(total)],
+            "lesion_id": [
+                f"L_{index:07d}" if index < verified else None
+                for index in range(total)
+            ],
+        }
+    )
+    verified_df, excluded_df, stats = build_verified_lesion_cohort(frame, verbose=False)
+    assert len(verified_df) == verified
+    assert len(excluded_df) == total - verified
+    assert stats["verified_lesion_coverage_percent"] == 100.0 * verified / total
+    assert stats["verified_lesion_coverage_percent"] > 90.0
+
+
+def test_verified_cohort_outputs_exclusions_and_prevents_leakage(tmp_path) -> None:
+    frame = _synthetic_frame()
+    missing_images = set(frame.loc[frame.index[:8], "image"])
+    frame.loc[frame.index[:8], "lesion_id"] = None
+    verified_df, excluded_df, cohort_stats = build_verified_lesion_cohort(
+        frame, verbose=False
+    )
+    splits = get_publication_splits(
+        verified_df,
+        label_col="label",
+        image_col="image",
+        verbose=False,
+    )
+    manifest = write_locked_split_artifacts(
+        *splits,
+        output_dir=tmp_path,
+        source_fingerprint=dataframe_fingerprint(
+            verified_df, "image", "label", "lesion_id"
+        ),
+        verified_df=verified_df,
+        excluded_missing_lesion_df=excluded_df,
+        cohort_summary=cohort_stats,
+    )
+
+    assigned_images = set().union(*(_image_set(split) for split in splits))
+    assert assigned_images.isdisjoint({image.lower() for image in missing_images})
+    assert sum(len(split) for split in splits) == len(verified_df)
+    assert len(verified_df) + len(excluded_df) == len(frame)
+
+    excluded_path = tmp_path / "excluded_missing_lesion_ids.csv"
+    saved_excluded = pd.read_csv(excluded_path)
+    assert list(saved_excluded.columns) == ["image", "label", "reason"]
+    assert set(saved_excluded["reason"]) == {EXCLUDED_MISSING_LESION_REASON}
+    assert set(saved_excluded["image"]) == missing_images
+    assert manifest["hashes"][excluded_path.name] == hashlib.sha256(
+        excluded_path.read_bytes()
+    ).hexdigest()
+
+    summary = json.loads((tmp_path / "split_summary.json").read_text(encoding="utf-8"))
+    fingerprint = json.loads(
+        (tmp_path / "dataset_fingerprint.json").read_text(encoding="utf-8")
+    )
+    assert summary["original_total_rows"] == len(frame)
+    assert summary["verified_lesion_rows"] == len(verified_df)
+    assert summary["excluded_missing_lesion_rows"] == len(excluded_df)
+    assert summary["verification"]["no_excluded_rows_in_splits"] is True
+    assert summary["verification"]["verified_rows_assigned_exactly_once"] is True
+    assert summary["excluded_missing_lesion_ids_sha256"] == manifest["hashes"][excluded_path.name]
+    assert fingerprint["verified_lesion_only_cohort"] is True
+    assert fingerprint["cohort_policy"] == "verified_lesion_only"
+    assert fingerprint["n_rows"] == len(verified_df)
+
+
+def test_verified_historic_partition_is_risk_dev_and_final_comes_from_old_pool() -> None:
+    frame = _synthetic_frame()
+    frame.loc[frame.index[:8], "lesion_id"] = None
+    verified_df, _excluded_df, _stats = build_verified_lesion_cohort(
+        frame, verbose=False
+    )
+    ordered = _prepare_publication_dataframe(
+        verified_df, "label", "image", "lesion_id"
+    )
+    old_train_pool, expected_risk_dev = get_lesion_grouped_split(
+        ordered,
+        label_col="label",
+        image_col="image",
+        test_size=0.15,
+        random_state=42,
+        verbose=False,
+    )
+    train, model_val, risk_dev, final_test = get_publication_splits(
+        verified_df,
+        label_col="label",
+        image_col="image",
+        verbose=False,
+    )
+    assert _image_set(risk_dev) == _image_set(expected_risk_dev)
+    assert _image_set(final_test).issubset(_image_set(old_train_pool))
+    assert _image_set(final_test).isdisjoint(_image_set(risk_dev))
+    assert sum(map(len, (train, model_val, risk_dev, final_test))) == len(verified_df)
