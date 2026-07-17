@@ -30,3 +30,7 @@ Thumbs.db
 # Docker volumes / misc
 *.log
 /tmp/argus/
+
+# Artifacts
+artifacts/*.zip
+
