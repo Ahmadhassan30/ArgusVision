@@ -34,3 +34,15 @@ Thumbs.db
 # Artifacts
 artifacts/*.zip
 
+# Python environments and caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local research data
+artifacts/rescue/
+artifacts/pairrisk/
+
+# Jupyter temporary files
+.ipynb_checkpoints/
