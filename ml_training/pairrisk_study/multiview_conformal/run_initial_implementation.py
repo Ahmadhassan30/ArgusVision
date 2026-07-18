@@ -14,24 +14,43 @@ import numpy as np
 import pandas as pd
 
 from .bootstrap import paired_bootstrap_differences
-from .constants import PRIMARY_ALPHA, RANDOM_SEED
-from .design_analysis import cross_fitted_method, select_lme_tau
+from .constants import GLOBAL_LME_TAU, PRIMARY_ALPHA, RANDOM_SEED
+from .design_analysis import cross_fitted_method, nested_lme_cross_fitted
 from .evaluate import build_lesion_records
 from .lesion_bags import (
     build_lesion_table,
     collapse_exact_duplicates,
     load_predictions,
+    load_frozen_lesion_split,
     split_design_calibration,
     subset_rows,
 )
-from .power_analysis import empirical_bootstrap_power
-from .view_count_analysis import build_view_count_table, spearman_summary
+from .power_analysis import power_precision_sensitivity
+from .view_count_analysis import (
+    build_view_count_table,
+    paired_view_count_correlation_bootstrap,
+    spearman_summary,
+)
+
+
+def _resolve_split_table(
+    lesion_table: pd.DataFrame,
+    split_file: str | Path | None,
+) -> tuple[pd.DataFrame, str]:
+    if split_file is not None:
+        return load_frozen_lesion_split(split_file, lesion_table), "frozen_split_file"
+    return split_design_calibration(lesion_table), "generated"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--predictions", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument(
+        "--split-file",
+        default=None,
+        help="Reuse an immutable lesion_split.csv; assignments are validated and never regenerated.",
+    )
     parser.add_argument("--image-root", default=None)
     parser.add_argument("--power-simulations", type=int, default=250)
     parser.add_argument("--power-bootstraps", type=int, default=250)
@@ -45,7 +64,7 @@ def main() -> None:
         frame, image_root=args.image_root
     )
     lesion_table = build_lesion_table(deduped)
-    split_table = split_design_calibration(lesion_table)
+    split_table, split_mode = _resolve_split_table(lesion_table, args.split_file)
 
     duplicate_rows.to_csv(output_dir / "duplicate_rows.csv", index=False)
     split_table.to_csv(output_dir / "lesion_split.csv", index=False)
@@ -65,13 +84,10 @@ def main() -> None:
     ].copy()
     records = build_lesion_records(design_multi)
 
-    selected_tau, tau_table = select_lme_tau(records)
-    tau_table.to_csv(output_dir / "lme_temperature_selection.csv", index=False)
-
     methods = [
         ("mean_probability", None),
         ("mean_score", None),
-        ("logmeanexp", selected_tau),
+        ("logmeanexp", GLOBAL_LME_TAU),
         ("pairrisk", None),
         ("max_score", None),
     ]
@@ -92,6 +108,30 @@ def main() -> None:
     fold_results.to_csv(output_dir / "design_fold_metrics.csv", index=False)
     lesion_results.to_csv(output_dir / "design_lesion_metrics.csv", index=False)
 
+    nested_folds, nested_lesions, nested_tau = nested_lme_cross_fitted(
+        records,
+        alpha=PRIMARY_ALPHA,
+        seed=RANDOM_SEED,
+    )
+    nested_folds.to_csv(output_dir / "nested_lme_fold_metrics.csv", index=False)
+    nested_tau.to_csv(output_dir / "nested_lme_selected_tau.csv", index=False)
+    nested_comparison_input = pd.concat(
+        [
+            lesion_results.loc[lesion_results["method"] == "pairrisk"],
+            nested_lesions,
+        ],
+        ignore_index=True,
+    )
+    nested_bootstrap = paired_bootstrap_differences(
+        nested_comparison_input,
+        comparisons=(("pairrisk", "nested_logmeanexp"),),
+        replicates=2000,
+        seed=RANDOM_SEED,
+    )
+    nested_bootstrap.to_csv(
+        output_dir / "nested_lme_vs_pairrisk_bootstrap.csv", index=False
+    )
+
     bootstrap = paired_bootstrap_differences(
         lesion_results,
         comparisons=(
@@ -108,31 +148,25 @@ def main() -> None:
     pivot = lesion_results.pivot(index="lesion_group", columns="method", values="set_size")
     paired = (pivot["pairrisk"] - pivot["max_score"]).dropna().to_numpy(dtype=float)
     max_mean = float(pivot["max_score"].mean())
-    target_effects = (
-        -0.02 * max_mean,
-        -0.05 * max_mean,
-        -0.10 * max_mean,
-    )
-    # Estimate final-test multi-view lesion count from the development ratio and
-    # known final-test image count only as a planning approximation.
-    expected_target_n = max(100, int(round(2197 / deduped.groupby("lesion_group").size().mean() * split_table["multi_view"].mean())))
-    power = empirical_bootstrap_power(
+    power = power_precision_sensitivity(
         paired,
-        target_n=expected_target_n,
-        target_effects=target_effects,
+        reference_set_size=max_mean,
         simulations=args.power_simulations,
         bootstrap_replicates=args.power_bootstraps,
         seed=RANDOM_SEED,
     )
-    pd.DataFrame([asdict(row) for row in power]).to_csv(
-        output_dir / "power_precision_simulation.csv", index=False
-    )
+    power.to_csv(output_dir / "power_precision_sensitivity.csv", index=False)
 
-    view_count_table = build_view_count_table(records, lme_tau=selected_tau)
+    view_count_table = build_view_count_table(records, lme_tau=GLOBAL_LME_TAU)
     view_count_table.to_csv(output_dir / "design_view_count_analysis.csv", index=False)
     spearman_summary(view_count_table).to_csv(
         output_dir / "design_view_count_spearman.csv", index=False
     )
+    paired_view_count_correlation_bootstrap(
+        view_count_table,
+        replicates=2000,
+        seed=RANDOM_SEED,
+    ).to_csv(output_dir / "view_count_correlation_bootstrap.csv", index=False)
     (
         view_count_table.groupby("view_bin", observed=True)
         .agg(
@@ -161,7 +195,12 @@ def main() -> None:
         "status": "initial_implementation_complete",
         "random_seed": RANDOM_SEED,
         "primary_alpha": PRIMARY_ALPHA,
-        "selected_lme_tau": selected_tau,
+        "global_lme_tau": GLOBAL_LME_TAU,
+        "global_lme_tau_frozen": True,
+        "nested_lme_outer_folds": 5,
+        "nested_lme_tau_grid": [0.02, 0.05, 0.10, 0.20, 0.50, 1.00],
+        "split_mode": split_mode,
+        "split_file": str(Path(args.split_file).resolve()) if args.split_file else None,
         "duplicate_audit": asdict(duplicate_audit),
         "n_images_after_deduplication": int(len(deduped)),
         "n_lesions": int(len(split_table)),
@@ -169,11 +208,15 @@ def main() -> None:
         "n_design_lesions": int((split_table["analysis_split"] == "risk_design").sum()),
         "n_design_multi_view_lesions": int(len(records)),
         "n_calibration_lesions": int((split_table["analysis_split"] == "risk_calibration").sum()),
-        "expected_final_test_multi_view_n_for_power_planning": expected_target_n,
+        "power_planning_target_sizes": [350, 493, 650],
+        "development_derived_planning_estimate": 493,
+        "development_derived_planning_estimate_is_observed_test_count": False,
         "final_test_accessed": False,
         "notes": [
             "Image-byte duplicate hashing is performed only when --image-root is supplied and files are accessible.",
             "All design comparisons are cross-fitted within risk_design and are not final-test results.",
+            "The 493-lesion scenario is a development-derived planning estimate, not an observed final-test lesion count.",
+            "Nested LME tau selection is design-stage evaluation only and does not alter the globally frozen tau of 0.05.",
             "Classwise, view-bin, and diversity analyses are descriptive only.",
         ],
     }

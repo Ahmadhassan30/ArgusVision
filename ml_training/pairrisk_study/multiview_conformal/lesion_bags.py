@@ -272,6 +272,108 @@ def split_design_calibration(
     return table.drop(columns="_stratum").sort_values("lesion_group").reset_index(drop=True)
 
 
+def load_frozen_lesion_split(
+    path: str | Path,
+    lesion_table: pd.DataFrame,
+) -> pd.DataFrame:
+    """Load and validate an immutable design/calibration lesion assignment."""
+    path = Path(path)
+    _forbid_final_test_text(path)
+    if not path.is_file():
+        raise FileNotFoundError(path)
+
+    required = {"lesion_group", "lesion_id", "analysis_split"}
+    current_required = {"lesion_group", "lesion_id"}
+    if not current_required.issubset(lesion_table.columns):
+        raise ValueError(
+            f"Lesion table missing columns: {sorted(current_required - set(lesion_table.columns))}"
+        )
+
+    frozen = pd.read_csv(path)
+    if not required.issubset(frozen.columns):
+        raise ValueError(f"Frozen split missing columns: {sorted(required - set(frozen.columns))}")
+
+    current = lesion_table.copy()
+    for name, table in (("current lesion table", current), ("frozen split", frozen)):
+        for column in ("lesion_group", "lesion_id"):
+            values = table[column]
+            if values.isna().any() or values.astype(str).str.strip().eq("").any():
+                raise ValueError(f"{name} contains missing {column} values.")
+        if table["lesion_group"].duplicated().any():
+            duplicates = table.loc[table["lesion_group"].duplicated(False), "lesion_group"]
+            raise ValueError(
+                f"{name} assigns a lesion_group more than once: {duplicates.astype(str).tolist()[:10]}"
+            )
+        if table["lesion_id"].duplicated().any():
+            duplicates = table.loc[table["lesion_id"].duplicated(False), "lesion_id"]
+            raise ValueError(
+                f"{name} assigns a lesion_id more than once: {duplicates.astype(str).tolist()[:10]}"
+            )
+
+    allowed_splits = {"risk_design", "risk_calibration"}
+    observed_splits = set(frozen["analysis_split"].astype(str))
+    if not observed_splits.issubset(allowed_splits) or observed_splits != allowed_splits:
+        raise ValueError(
+            "Frozen split must contain only risk_design and risk_calibration assignments; "
+            f"observed={sorted(observed_splits)}"
+        )
+
+    for identity_column in ("lesion_group", "lesion_id"):
+        current_ids = set(current[identity_column].astype(str))
+        frozen_ids = set(frozen[identity_column].astype(str))
+        unknown = sorted(frozen_ids - current_ids)
+        missing = sorted(current_ids - frozen_ids)
+        if unknown or missing:
+            raise ValueError(
+                f"Frozen split {identity_column} mismatch: "
+                f"unknown={unknown[:10]}, missing={missing[:10]}"
+            )
+
+    current_by_group = current.set_index("lesion_group").sort_index()
+    frozen_by_group = frozen.set_index("lesion_group").sort_index()
+    current_ids = current_by_group["lesion_id"].astype(str)
+    frozen_ids = frozen_by_group["lesion_id"].astype(str)
+    identity_mismatch = current_ids != frozen_ids
+    if identity_mismatch.any():
+        raise ValueError(
+            "Frozen split lesion_group-to-lesion_id mapping mismatch: "
+            f"{identity_mismatch[identity_mismatch].index.astype(str).tolist()[:10]}"
+        )
+
+    shared_metadata = (
+        set(current.columns)
+        & set(frozen.columns)
+        - {"lesion_group", "lesion_id", "analysis_split"}
+    )
+    for column in sorted(shared_metadata):
+        left = current_by_group[column]
+        right = frozen_by_group[column]
+        if pd.api.types.is_numeric_dtype(left) and pd.api.types.is_numeric_dtype(right):
+            equal = np.isclose(
+                left.to_numpy(dtype=float), right.to_numpy(dtype=float), equal_nan=True
+            )
+        else:
+            equal = left.astype(str).to_numpy() == right.astype(str).to_numpy()
+        if not bool(np.all(equal)):
+            bad_groups = current_by_group.index[~equal].astype(str).tolist()[:10]
+            raise ValueError(f"Frozen split metadata mismatch in {column}: {bad_groups}")
+
+    design_ids = set(
+        frozen.loc[frozen["analysis_split"] == "risk_design", "lesion_group"].astype(str)
+    )
+    calibration_ids = set(
+        frozen.loc[frozen["analysis_split"] == "risk_calibration", "lesion_group"].astype(str)
+    )
+    if design_ids & calibration_ids:
+        raise RuntimeError("Frozen design/calibration overlap detected.")
+    if design_ids | calibration_ids != set(current["lesion_group"].astype(str)):
+        raise RuntimeError("Frozen split does not assign every current lesion exactly once.")
+
+    assignments = frozen_by_group["analysis_split"]
+    current_by_group["analysis_split"] = assignments
+    return current_by_group.reset_index().sort_values("lesion_group").reset_index(drop=True)
+
+
 def subset_rows(frame: pd.DataFrame, lesion_ids: Iterable[str]) -> pd.DataFrame:
     lesion_ids = set(lesion_ids)
     return frame[frame["lesion_group"].isin(lesion_ids)].copy()

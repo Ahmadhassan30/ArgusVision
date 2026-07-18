@@ -81,3 +81,73 @@ def spearman_summary(table: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+
+
+def paired_view_count_correlation_bootstrap(
+    table: pd.DataFrame,
+    *,
+    replicates: int = 2000,
+    seed: int = 2026,
+) -> pd.DataFrame:
+    """Bootstrap rho(max score, views) minus rho(PairRisk score, views)."""
+    required = {"lesion_group", "n_views", "true_score_max", "true_score_pairrisk"}
+    missing = required - set(table.columns)
+    if missing:
+        raise ValueError(f"Missing view-count bootstrap columns: {sorted(missing)}")
+    if table["lesion_group"].duplicated().any():
+        raise ValueError("View-count bootstrap requires exactly one row per lesion.")
+    if replicates < 100:
+        raise ValueError("Use at least 100 bootstrap replicates.")
+
+    frame = table.loc[:, sorted(required)].copy()
+    finite = np.isfinite(
+        frame[["n_views", "true_score_max", "true_score_pairrisk"]].to_numpy(dtype=float)
+    ).all(axis=1)
+    frame = frame.loc[finite].reset_index(drop=True)
+    if len(frame) < 3:
+        raise ValueError("At least three finite lesions are required for correlation bootstrap.")
+
+    def correlation(column: str, indices: np.ndarray | None = None) -> float:
+        sampled = frame if indices is None else frame.iloc[indices]
+        x = sampled["n_views"].to_numpy(dtype=float)
+        y = sampled[column].to_numpy(dtype=float)
+        if np.unique(x).size < 2 or np.unique(y).size < 2:
+            return float("nan")
+        return float(spearmanr(x, y).statistic)
+
+    rho_max = correlation("true_score_max")
+    rho_pairrisk = correlation("true_score_pairrisk")
+    estimate = rho_max - rho_pairrisk
+
+    rng = np.random.default_rng(seed)
+    differences = np.empty(replicates, dtype=float)
+    for replicate in range(replicates):
+        indices = rng.integers(0, len(frame), size=len(frame))
+        differences[replicate] = (
+            correlation("true_score_max", indices)
+            - correlation("true_score_pairrisk", indices)
+        )
+    valid = differences[np.isfinite(differences)]
+    if valid.size:
+        ci_low, ci_high = np.quantile(valid, [0.025, 0.975])
+    else:
+        ci_low = ci_high = float("nan")
+
+    return pd.DataFrame(
+        [
+            {
+                "comparison": "spearman_rho_max_score_minus_pairrisk_score_vs_view_count",
+                "n_lesions": int(len(frame)),
+                "rho_max_score_vs_view_count": rho_max,
+                "rho_pairrisk_score_vs_view_count": rho_pairrisk,
+                "estimate": float(estimate),
+                "ci_low": float(ci_low),
+                "ci_high": float(ci_high),
+                "replicates": int(replicates),
+                "valid_replicates": int(valid.size),
+                "invalid_replicates": int(replicates - valid.size),
+                "seed": int(seed),
+                "sampling_unit": "lesion_group",
+            }
+        ]
+    )
