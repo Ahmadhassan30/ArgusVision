@@ -46,3 +46,25 @@ artifacts/pairrisk/
 
 # Jupyter temporary files
 .ipynb_checkpoints/
+
+# Predictions
+*risk_dev_predictions.csv
+
+# ISIC images
+*ISIC*
+*isic*
+!*ISIC*.py
+!*isic*.py
+
+# Generated bootstrap files
+*bootstrap*
+!*bootstrap*.py
+
+# Generated figures
+*figure*
+*figures/
+!*figure*.py
+!*figures*.py
+
+# Large Parquet files
+*.parquet

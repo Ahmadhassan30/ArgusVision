@@ -1,0 +1,34 @@
+{
+  "protocol_version": "pairrisk_v1_implementation_start",
+  "status": "design_stage_locked_before_new_lesion_level_analysis",
+  "random_seed": 2026,
+  "class_order": ["MEL", "NV", "BCC", "AK", "BKL", "DF", "VASC", "SCC"],
+  "frozen_predictor": "arithmetic mean of frozen Agent A and Agent B probabilities",
+  "primary_population": "multi-view lesions after exact-duplicate collapse (m >= 2)",
+  "primary_conformal_score": "deterministic APS",
+  "primary_alpha": 0.10,
+  "methods": {
+    "mean_probability": "APS after arithmetic mean of probabilities",
+    "mean_score": "mean of per-view APS candidate-label scores",
+    "logmeanexp": "cardinality-normalized LogMeanExp of per-view APS scores; tau selected only on risk_design",
+    "pairrisk": "mean maximum over all unordered pairs of per-view APS scores",
+    "max_score": "maximum per-view APS score"
+  },
+  "lme_tau_grid": [0.02, 0.05, 0.1, 0.2, 0.5, 1.0],
+  "primary_estimand": "PairRisk minus max-score average prediction-set size at 90% nominal marginal coverage",
+  "mandatory_mean_interpretation": "report singleton rate, conditional singleton consistency, and safe singleton yield; do not claim universal dominance",
+  "inference_unit": "lesion",
+  "calibration_unit": "lesion",
+  "bootstrap_unit": "lesion",
+  "class_conditional_guarantees": false,
+  "view_bin_conditional_guarantees": false,
+  "final_test_access": "forbidden until design decision, code freeze, and calibration freeze",
+  "forbidden_actions": [
+    "load or inspect final_test before protocol completion",
+    "select methods or tau on risk_calibration",
+    "treat image pairs as independent observations",
+    "retrain or replace frozen disease classifiers",
+    "claim count invariance without qualification",
+    "claim autonomous clinical readiness"
+  ]
+}
