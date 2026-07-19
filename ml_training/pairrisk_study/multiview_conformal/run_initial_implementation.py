@@ -107,6 +107,16 @@ def main() -> None:
     lesion_results = pd.concat(lesion_tables, ignore_index=True)
     fold_results.to_csv(output_dir / "design_fold_metrics.csv", index=False)
     lesion_results.to_csv(output_dir / "design_lesion_metrics.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "tau": GLOBAL_LME_TAU,
+                "selected": True,
+                "selection_scope": "globally_frozen_protocol_value",
+                "selected_in_this_run": False,
+            }
+        ]
+    ).to_csv(output_dir / "lme_temperature_selection.csv", index=False)
 
     nested_folds, nested_lesions, nested_tau = nested_lme_cross_fitted(
         records,
@@ -196,6 +206,7 @@ def main() -> None:
         "random_seed": RANDOM_SEED,
         "primary_alpha": PRIMARY_ALPHA,
         "global_lme_tau": GLOBAL_LME_TAU,
+        "selected_lme_tau": GLOBAL_LME_TAU,
         "global_lme_tau_frozen": True,
         "nested_lme_outer_folds": 5,
         "nested_lme_tau_grid": [0.02, 0.05, 0.10, 0.20, 0.50, 1.00],
